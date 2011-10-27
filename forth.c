@@ -6,6 +6,16 @@
 #include <nacl/nacl_srpc.h>
 #include <sys/nacl_syscalls.h>
 #include <sys/errno.h>
+#include <ppapi/c/pp_errors.h>
+#include <ppapi/c/pp_module.h>
+#include <ppapi/c/pp_var.h>
+#include <ppapi/c/ppb.h>
+#include <ppapi/c/ppb_instance.h>
+#include <ppapi/c/ppb_messaging.h>
+#include <ppapi/c/ppb_var.h>
+#include <ppapi/c/ppp.h>
+#include <ppapi/c/ppp_instance.h>
+#include <ppapi/c/ppp_messaging.h>
 
 #define VERBOSE 1
 //#define VARIABLES_IN_BLOCK_SPACE 1
@@ -806,6 +816,7 @@ static void Boot(int32_t *data, int len, int start) {
   pthread_create(&main_thread, NULL, MainThread, 0);
 }
 
+#if 0
 static void BootMethod(NaClSrpcRpc *rpc,
                        NaClSrpcArg **in_args,
                        NaClSrpcArg **out_args,
@@ -900,4 +911,17 @@ int main() {
   }
   NaClSrpcModuleFini();
   return 0;
+}
+#endif
+
+PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
+                                       PPB_GetInterface get_browser) {
+  return PP_OK;
+}
+
+PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
+  return NULL;
+}
+
+PP_EXPORT void PPP_ShutdownModule() {
 }
