@@ -1,0 +1,75 @@
+<html>
+  <head>
+    <title>Native Client Forth</title>
+  </head>
+  <body onload="init()">
+    <embed type="application/x-nacl-srpc" id="forth"
+           name="forth" width="0" height="0" src="forth.nexe" />
+
+    <div id="out"></div>
+
+    <script type="text/javascript">
+      //<![CDATA[
+
+      function http_get(url, callback) {
+        var request = new XMLHttpRequest();
+        request.overrideMimeType('text/plain; charset=x-user-defined');
+        request.onreadystatechange = function() {
+          if (request.readyState == 4) {
+            if (request.status == 200) {
+              callback(request.responseText);
+            } else {
+              callback(null);
+            }
+          }
+        }
+        request.open('GET', url);
+        request.send(null);
+      }
+
+      function check_for_ready(forth, complete) {
+        if (forth.__moduleReady == 1) {
+          complete();
+        } else if (forth.__moduleReady == 0) {
+          setTimeout(function() { check_for_ready(forth, complete) }, 100);
+        } else {
+          alert("nacl module load failed");
+        }
+      }
+
+      function decode_blocks(data) {
+        var values = [];
+        var length = data.length;
+        for (var i = 0; i < length; i+=4) {
+          var a = data.charCodeAt(i + 0);
+          if (a > 255) a -= 63232; 
+          var b = data.charCodeAt(i + 1);
+          if (b > 255) b -= 63232; 
+          var c = data.charCodeAt(i + 2);
+          if (c > 255) c -= 63232; 
+          var d = data.charCodeAt(i + 3);
+          if (d > 255) d -= 63232; 
+          var x = a | (b<<8) | (c<<16) | (d<<24);
+          values.push(x);
+        }
+        return values;
+      }
+
+      function boot(data) {
+        var forth = document.getElementById("forth");
+        check_for_ready(forth, function() {
+          var values = decode_blocks(data);
+          var ret = forth.boot(values, 0);
+          document.getElementById('out').innerHTML = ret.toString(16);
+        });
+      }
+
+      function init() {
+        http_get("forth.boot", boot);
+      }
+
+      //]]>
+    </script>
+  </body>
+</html>
+

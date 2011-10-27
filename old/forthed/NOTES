@@ -1,0 +1,56 @@
+MEMORY MAP
+-----------------------------------------------------------------------
+
+-0x2000 Bottom Guard
+0 Null Guard
+0x10000 2048 trampolines
+0x20000 code
+----
+dynamic code
+---
+.rodata
+----
+0x40000000 Top Guard
+
+
+
+FLAGS
+-----------------------------------------------------------------------
+
+  if env.Bit('target_arm'):
+    # On ARM, we invoke the linker directly rather than via gcc.
+    # TODO(mseaborn): Change driver script to accept -Wl args.
+    return '--section-start=.rodata=0x1000000'
+  else:
+    return '-Wl,--section-start,.rodata=0x1000000'
+
+
+
+SRPC
+-----------------------------------------------------------------------
+http://www.chromium.org/nativeclient/life-of-sel_ldr
+
+/*
+ * Message formats:
+ * SRPC communicates using two main message types, requests and responses.
+ * Both are communicated with an rpc (header) prepended.
+ *
+ * rpc:
+ *   protocol               - (uint32_t) 4 bytes
+ *   message id             - (uint64_t) 8 bytes
+ *   request/response       - (uint8_t) 1 byte
+ *   rpc method index       - (uint32_t) 4 bytes
+ *   return code            - (uint32_t) 4 bytes (only sent for responses)
+ *
+ * request:
+ *   #args                  - (uint32_t) 4 bytes
+ *   #args * (arg value)    - varying size defined by interface below
+ *   #rets                  - (uint32_t) 4 bytes
+ *   #rets * (arg template) - varying size defined by interface below
+ *
+ * response:
+ *   #rets                  - (uint32_t) 4 bytes
+ *   #rets * (arg value)    - varying size defined by interface below
+ *
+ */
+

@@ -1,0 +1,239 @@
+<html>
+  <head>
+    <title>Native Client Forth</title>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href="/favicon.ico" rel="SHORTCUT ICON">
+    <link href="http://prismforth.appspot.com/favicon.png"
+     rel="apple-touch-icon-precomposed">
+    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta name="viewport" content="maximum-scale=1.0">
+    <meta name="viewport" content="user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style"
+     content="black-translucent"/>
+    <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+    <META HTTP-EQUIV="Expires" CONTENT="-1">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  </head>
+  <body onload="init()"
+        bgcolor="#000000"
+        link="#0000ff"
+        alink="#0000ff"
+        vlink="#0000ff"><font color="#ffffff">
+    <div id="login" align="right">
+    {% if signed_in %}
+      <font color="#777777">[ {{ email }} ]</font>
+      <a href="{{ sign_out }}">Sign out</a>
+    {% else %}
+      <a href="{{ sign_in }}">Sign in</a>
+    {% endif %}
+    </div>
+
+    <embed type="application/x-nacl" id="forth"
+           name="forth" width="0" height="0"
+           nexes="x86-32: forth_x86-32.nexe
+                  x86-64: forth_x86-64.nexe"/>
+
+    <div id="out"></div>
+
+    <script type="text/javascript">
+      //<![CDATA[
+
+      var forth;
+      var pending_out = [];
+
+      function http_request(url, method, values, callback) {
+        var request = new XMLHttpRequest();
+        request.overrideMimeType('text/plain; charset=x-user-defined');
+        request.onreadystatechange = function() {
+          if (request.readyState == 4) {
+            callback(request.status, request.responseText);
+          }
+        };
+        request.open(method, url);
+        if (method == 'POST') {
+          //request.setRequestHeader('Content-Type',
+          //    'application/x-www-form-urlencoded');
+          //request.setRequestHeader('Content-Type', 'multipart/form-data');
+          var fd = new FormData();
+          for (key in values) {
+            fd.append(key, values[key]);
+          }
+          request.send(fd);
+        } else {
+          request.send(null);
+        }
+      };
+
+      function check_for_ready(forth, complete) {
+        if (forth.__moduleReady == 1) {
+          complete();
+        } else if (forth.__moduleReady == 0) {
+          setTimeout(function() { check_for_ready(forth, complete) }, 100);
+        } else {
+          set_out('nacl module load failed - canary chrome required');
+        }
+      }
+
+      function decode_blocks(data) {
+        var values = [];
+        var length = data.length;
+        for (var i = 0; i < length; i+=4) {
+          var a = data.charCodeAt(i + 0);
+          if (a > 255) a -= 63232; 
+          var b = data.charCodeAt(i + 1);
+          if (b > 255) b -= 63232; 
+          var c = data.charCodeAt(i + 2);
+          if (c > 255) c -= 63232; 
+          var d = data.charCodeAt(i + 3);
+          if (d > 255) d -= 63232; 
+          var x = a | (b<<8) | (c<<16) | (d<<24);
+          values.push(x);
+        }
+        return values;
+      }
+
+      function decode_string4(values) {
+        var str = [];
+        var length = values.length;
+        for (var i = 0; i < length; i++) {
+          var x = values[i];
+          str.push(String.fromCharCode(x & 0xff));
+          str.push(String.fromCharCode((x>>8) & 0xff));
+          str.push(String.fromCharCode((x>>16) & 0xff));
+          str.push(String.fromCharCode((x>>24) & 0xff));
+        }
+        return str.join('');
+      }
+
+      function keypress(evt) {
+        var ch = evt.which;
+        if (ch == undefined) ch = evt.keyCode;
+        forth.send([1, ch]);
+        return false;
+      }
+
+      function keydown(evt) {
+        forth.send([1, evt.keyCode + 256]);
+        if (evt.keyCode == 8) return false;
+        return true;
+      }
+
+      function keyup(evt) {
+        forth.send([1, -evt.keyCode]);
+        if (evt.keyCode == 8) return false;
+        return true;
+      }
+
+      function decoder(msg) {
+        this.msg = msg;
+        this.available = function() {
+          return this.msg.length != 0;
+        };
+        this.next = function() {
+          var len = this.msg[0];
+          var len4 = Math.floor((len + 3) / 4);
+          var data = decode_string4(this.msg.slice(1, len4 + 1));
+          data = data.slice(0, len);
+          this.msg = this.msg.slice(len4 + 1);
+          return data;
+        };
+      }
+
+      function tick() {
+        for(;;) {
+          var msg = forth.receive(20000);
+          if (!msg.length) break;
+
+          if (msg[0] == 4) {
+            var msgd = new decoder(msg.slice(1));
+            var url = msgd.next();
+            var method = msgd.next().toUpperCase();
+            var values = {};
+            while (msgd.available()) {
+              var key = msgd.next();
+              var value = msgd.next();
+              values[key] = value;
+            }
+            http_request(url, method, values, function(status, data) {
+              var excess = data.length % 4;
+              if (excess) {
+                data = data + new Array(5 - excess).join('0');
+              }
+              var values = decode_blocks(data);
+              var response = [4, status, data.length].concat(values);
+              forth.send(response);
+            });
+          } else if (msg[0] == 8) {
+            var data = decode_string4(msg.slice(2));
+            data = data.slice(0, msg[1]);
+            pending_out.push(data);
+          } else if (msg[0] == 16) {
+            set_out(pending_out.join(''));
+            pending_out = [];
+          } else if (msg[0] == 32) {
+            var data = decode_string4(msg.slice(2));
+            data = data.slice(0, msg[1]);
+            eval(data);
+          } else {
+            alert(msg);
+          }
+        }
+      }
+
+      function start_events() {
+        document.onkeypress = keypress;
+        document.onkeydown = keydown;
+        document.onkeyup = keyup;
+        setInterval(tick, 30);
+      }
+
+      function set_out(value) {
+        var out = document.getElementById('out');
+        out.innerHTML = value;
+      }
+
+      function init() {
+        var boot_info = [
+            '{{ user_id }}',
+            '{{ section_quota }}',
+            '{{ index_quota }}',
+            '{{ boot_user_id }}',
+            '{{ boot_section }}',
+            '{{ boot_index }}',
+            '{{ boot_start }}',
+        ];
+        if (boot_info[0].substr(0, 1) == '{') {
+          boot_info = [-1, 0, 0, -1, -1, -1, 0];
+        } else {
+          for (var x = 0; x < boot_info.length; x++) {
+            boot_info[x] = parseInt(boot_info[x]);
+          }
+        }
+        var url;
+        if (boot_info[5] == -1) {
+          url = '/forth.boot';
+        } else {
+          url = '/read?owner=' + boot_info[3] +
+                '&section=' + boot_info[4] +
+                '&index=' + boot_info[5] + '&count=4';
+        }
+        http_request(url, 'GET', null, function(status, data) {
+          if (status != 200) {
+            set_out('Loading boot area failed!');
+            return;
+          }
+          forth = document.getElementById('forth');
+          check_for_ready(forth, function() {
+            var values = decode_blocks(data);
+            forth.boot(values, boot_info);
+            start_events();
+          });
+        });
+      }
+
+      //]]>
+    </script>
+  </font></body>
+</html>
