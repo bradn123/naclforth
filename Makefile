@@ -37,12 +37,12 @@ all: naclforth_web
 
 
 $(NACLFORTH32): $(OBJ)/naclforth_x86-32.o $(DEPLOY_STATIC)
-	${CC32} -o $@.unstripped $< ${LFLAGS_X86_32} ${LIBS}
-	${STRIP32} $@.unstripped -o $@
+	${CC32} -o $@ $< ${LFLAGS_X86_32} ${LIBS}
+	${STRIP32} $@
 
 $(NACLFORTH64): $(OBJ)/naclforth_x86-64.o $(DEPLOY_STATIC)
-	${CC64} -o $@.unstripped $< ${LFLAGS_X86_64} ${LIBS}
-	${STRIP64} $@.unstripped -o $@
+	${CC64} -o $@ $< ${LFLAGS_X86_64} ${LIBS}
+	${STRIP64} $@
 
 $(OBJ)/naclforth_x86-32.o: naclforth.c $(OBJ)
 	${CC32} -o $@ -c $< ${CFLAGS_X86_32}
