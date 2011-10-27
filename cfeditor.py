@@ -495,10 +495,6 @@ class Editor(object):
 
 
 def main(stdscr):
-  if len(sys.argv[1]) != 2:
-    print >>sys.stderr, 'USAGE: %s <cf-file>' % sys.argv[0]
-    sys.exit(1)
-
   dt = LoadWords(sys.argv[1])
   editor = Editor(stdscr, dt)
 
@@ -506,4 +502,9 @@ def main(stdscr):
   editor.Command()
 
 
-curses.wrapper(main)
+if __name__ == '__main__':
+  if len(sys.argv) != 2:
+    print >>sys.stderr, 'USAGE: %s <cf-file>' % sys.argv[0]
+    sys.exit(1)
+
+  curses.wrapper(main)
