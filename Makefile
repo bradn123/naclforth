@@ -1,8 +1,6 @@
 NACL_SDK_ROOT?=~/clients/naclports/src
 NACL_SDK_BIN_DIR=${NACL_SDK_ROOT}/toolchain/mac_x86_newlib/bin
 
-HTTPD=./httpd.py
-
 CC32=${NACL_SDK_BIN_DIR}/i686-nacl-gcc
 CC64=${NACL_SDK_BIN_DIR}/x86_64-nacl-gcc
 STRIP32=${NACL_SDK_BIN_DIR}/i686-nacl-strip
@@ -76,18 +74,8 @@ $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
 deploy: naclforth_web
 	appcfg.py update web
 
-httpd: httpdstop
-	bash -c '${HTTPD} & echo $$! >httpd.pid'
-
-httpdstop:
-	kill `cat httpd.pid` ; rm httpd.pid || true
-
 grab:
 	curl 'https://naclforth.appspot.com/read?owner=0&section=0&index=0&count=4' -o naclforth.boot
-
-start: httpd chrome
-
-stop: httpdstop chromestop
 
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
