@@ -30,41 +30,45 @@ DEPLOY_STATIC=$(DEPLOY)/static
 OBJ=$(OUT)/obj
 
 
+NACLFORTH32=$(DEPLOY_STATIC)/naclforth_x86-32.nexe
+NACLFORTH64=$(DEPLOY_STATIC)/naclforth_x86-64.nexe
+
+
 all: naclforth_web
 
 
-$(DEPLOY_STATIC)/forth_x86-32.nexe: $(OBJ)/forth_x86-32.o $(DEPLOY_STATIC)
+$(NACLFORTH32): $(OBJ)/naclforth_x86-32.o $(DEPLOY_STATIC)
 	${CC32} -o $@.unstripped $< ${LFLAGS_X86_32} ${LIBS}
 	${STRIP32} $@.unstripped -o $@
 
-$(DEPLOY_STATIC)/forth_x86-64.nexe: $(OBJ)/forth_x86-64.o $(DEPLOY_STATIC)
+$(NACLFORTH64): $(OBJ)/naclforth_x86-64.o $(DEPLOY_STATIC)
 	${CC64} -o $@.unstripped $< ${LFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@.unstripped -o $@
 
-$(OBJ)/forth_x86-32.o: forth.c $(OBJ)
+$(OBJ)/naclforth_x86-32.o: naclforth.c $(OBJ)
 	${CC32} -o $@ -c $< ${CFLAGS_X86_32}
 
-$(OBJ)/forth_x86-64.o: forth.c $(OBJ)
+$(OBJ)/naclforth_x86-64.o: naclforth.c $(OBJ)
 	${CC64} -o $@ -c $< ${CFLAGS_X86_64}
 
 $(DEPLOY)/%: web/%
 	mkdir -p $(@D)
 	cp $< $@
 
-naclforth_web: $(DEPLOY_STATIC)/forth_x86-32.nexe \
-               $(DEPLOY_STATIC)/forth_x86-64.nexe \
-               $(DEPLOY_STATIC)/forth.boot \
+naclforth_web: $(NACLFORTH32) \
+               $(NACLFORTH64) \
+               $(DEPLOY_STATIC)/naclforth.boot \
                $(DEPLOY_STATIC)/nacl4th.ico \
                $(DEPLOY_STATIC)/nacl4th.png \
                $(DEPLOY)/naclforth.py \
                $(DEPLOY)/app.yaml \
                $(DEPLOY)/index.yaml \
-               $(DEPLOY)/forth.html
+               $(DEPLOY)/naclforth.html
 
-$(DEPLOY_STATIC)/forth.boot: forth.boot
+$(DEPLOY_STATIC)/naclforth.boot: naclforth.boot
 	cp $< $@
 
-$(DEPLOY)/forth.html: forth.html
+$(DEPLOY)/naclforth.html: naclforth.html
 	cp $< $@
 
 $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
@@ -80,7 +84,7 @@ httpdstop:
 	kill `cat httpd.pid` ; rm httpd.pid || true
 
 grab:
-	curl 'https://naclforth.appspot.com/read?owner=0&section=0&index=0&count=4' -o forth.boot
+	curl 'https://naclforth.appspot.com/read?owner=0&section=0&index=0&count=4' -o naclforth.boot
 
 start: httpd chrome
 

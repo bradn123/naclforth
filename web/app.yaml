@@ -15,21 +15,21 @@ handlers:
   static_files: static/nacl4th.png
   upload: static/nacl4th.png
 
-- url: /forth_x86-32.nexe
-  static_files: static/forth_x86-32.nexe
-  upload: static/forth_x86-32.nexe
+- url: /naclforth_x86-32.nexe
+  static_files: static/naclforth_x86-32.nexe
+  upload: static/naclforth_x86-32.nexe
   mime_type: application/octet-stream
   expiration: "5s"
 
-- url: /forth_x86-64.nexe
-  static_files: static/forth_x86-64.nexe
-  upload: static/forth_x86-64.nexe
+- url: /naclforth_x86-64.nexe
+  static_files: static/naclforth_x86-64.nexe
+  upload: static/naclforth_x86-64.nexe
   mime_type: application/octet-stream
   expiration: "5s"
 
-- url: /forth.boot
-  static_files: static/forth.boot
-  upload: static/forth.boot
+- url: /naclforth.boot
+  static_files: static/naclforth.boot
+  upload: static/naclforth.boot
   mime_type: application/octet-stream
   expiration: "5s"
 

@@ -229,7 +229,7 @@ class Editor(object):
     # 1 - Interp forth word (yellow)
     curses.init_pair(TAG_YELLOW_WORD,
                      curses.COLOR_YELLOW, curses.COLOR_BLACK)
-    # 2 - Interp big number (yellow) 
+    # 2 - Interp big number (yellow)
     curses.init_pair(TAG_YELLOW_BIGNUM,
                      curses.COLOR_YELLOW, curses.COLOR_BLACK)
     # 3 - Define forth word (red)
@@ -300,7 +300,7 @@ class Editor(object):
     if current_row > self.row + (height - 1):
       self.row = current_row - (height - 1)
 
-    # Draw and place cursor back where it should be. 
+    # Draw and place cursor back where it should be.
     self.pad.refresh(self.row, 0, 0, 0, height - 1, size[1] - 1)
     self.window.move(self.pad.getyx()[0] - self.row, self.pad.getyx()[1])
 
@@ -367,7 +367,7 @@ class Editor(object):
       self.data[self.block * 256 + i + len(values)] = (
           self.data[self.block * 256 + i])
     for i in range(len(values)):
-      self.data[self.block * 256 + i + self.offset] = values[i] 
+      self.data[self.block * 256 + i + self.offset] = values[i]
     self.offset += len(values)
     self.offset -= 1
 
@@ -392,7 +392,7 @@ class Editor(object):
     if tag is None:
       tag = remaining
     while True:
-      self.menu_tag = tag 
+      self.menu_tag = tag
       word = self.AcceptWord('> ')
       if not word: break
       self.InsertWord(tag, word)
@@ -495,6 +495,10 @@ class Editor(object):
 
 
 def main(stdscr):
+  if len(sys.argv[1]) != 2:
+    print >>sys.stderr, 'USAGE: %s <cf-file>' % sys.argv[0]
+    sys.exit(1)
+
   dt = LoadWords(sys.argv[1])
   editor = Editor(stdscr, dt)
 

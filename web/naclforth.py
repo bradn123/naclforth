@@ -205,7 +205,7 @@ class MainPageHandler(webapp.RequestHandler):
     else:
       fields['signed_in'] = False
       fields['sign_in'] = users.create_login_url(self.request.uri)
-    path = os.path.join(os.path.dirname(__file__), 'forth.html')
+    path = os.path.join(os.path.dirname(__file__), 'naclforth.html')
     self.response.out.write(template.render(path, fields))
 
 

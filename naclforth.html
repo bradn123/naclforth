@@ -32,8 +32,7 @@
 
     <embed type="application/x-nacl" id="forth"
            name="forth" width="0" height="0"
-           nexes="x86-32: forth_x86-32.nexe
-                  x86-64: forth_x86-64.nexe"/>
+           nmf="naclforth.nmf"/>
 
     <div id="out"></div>
 
@@ -213,7 +212,7 @@
         }
         var url;
         if (boot_info[5] == -1) {
-          url = '/forth.boot';
+          url = '/naclforth.boot';
         } else {
           url = '/read?owner=' + boot_info[3] +
                 '&section=' + boot_info[4] +
