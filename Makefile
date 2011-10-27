@@ -12,10 +12,9 @@ STRIP64=${NACL_SDK_BIN_DIR}/x86_64-nacl-strip
 RODATA_START=0x4800000
 
 
-#CFLAGS=-O2 -Wall -Werror -DRODATA_START=${RODATA_START}
-CFLAGS=-O2 -Wall -DRODATA_START=${RODATA_START}
+CFLAGS=-O2 -Wall -Werror -DRODATA_START=${RODATA_START}
 LFLAGS=${CFLAGS} -Wl,--section-start,.rodata=${RODATA_START}
-LIBS=-lppapi -lpthread
+LIBS=-lppapi -lnacl_dyncode -lpthread
 
 
 CFLAGS_X86_32=-DARCH_X86_32 ${CFLAGS}

@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <nacl/nacl_srpc.h>
 #include <sys/nacl_syscalls.h>
 #include <sys/errno.h>
 #include <ppapi/c/pp_errors.h>
@@ -86,6 +85,10 @@ typedef struct _MESSAGE {
   cell *data;
   struct _MESSAGE *next;
 } MESSAGE;
+
+static struct PPB_Messaging* ppb_messaging_interface = NULL;
+static struct PPB_Var* ppb_var_interface = NULL;
+static PP_Module module_id = 0;
 
 static pthread_mutex_t master_lock;
 static int booted = 0;
@@ -914,12 +917,108 @@ int main() {
 }
 #endif
 
+static PP_Bool Instance_DidCreate(PP_Instance instance,
+                                  uint32_t argc,
+                                  const char* argn[],
+                                  const char* argv[]) {
+  Setup();
+
+  return PP_TRUE;
+}
+
+static void Instance_DidDestroy(PP_Instance instance) {
+}
+
+static void Instance_DidChangeView(PP_Instance instance,
+                                   const struct PP_Rect* position,
+                                   const struct PP_Rect* clip) {
+}
+
+static void Instance_DidChangeFocus(PP_Instance instance,
+                                    PP_Bool has_focus) {
+}
+
+static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
+                                           PP_Resource url_loader) {
+  /* NaCl modules do not need to handle the document load function. */
+  return PP_FALSE;
+}
+
+static void Messaging_HandleMessage(
+    PP_Instance instance, struct PP_Var var_message) {
+  uint32_t len = 0;
+  const char* msg;
+
+  if (var_message.type != PP_VARTYPE_STRING) {
+    /* Only handle string messages */
+    return;
+  }
+  msg = ppb_var_interface->VarToUtf8(var_message, &len);
+  if (len > 1 && msg[0] == 'B') {
+    Boot((int32_t*)msg + 1, len - 1, 0);
+    return;
+  }
+  #if 0
+  char* message = VarToCStr(var_message);
+  if (message == NULL)
+    return;
+  struct PP_Var var_result = PP_MakeUndefined();
+  if (strncmp(message, kFortyTwoMethodId, strlen(kFortyTwoMethodId)) == 0) {
+    var_result = FortyTwo();
+  } else if (strncmp(message,
+                     kReverseTextMethodId,
+                     strlen(kReverseTextMethodId)) == 0) {
+    /* Use everything after the ':' in |message| as the string argument. */
+    char* string_arg = strchr(message, kMessageArgumentSeparator);
+    if (string_arg != NULL) {
+      string_arg += 1;  /* Advance past the ':' separator. */
+      ReverseStr(string_arg);
+      var_result = CStrToVar(string_arg);
+    }
+  }
+  free(message);
+
+  /* Echo the return result back to browser.  Note that HandleMessage is always
+   * called on the main thread, so it's OK to post the message back to the
+   * browser directly from here.  This return post is asynchronous.
+   */
+  ppb_messaging_interface->PostMessage(instance, var_result);
+  /* If the message was created using VarFromUtf8() it needs to be released.
+   * See the comments about VarFromUtf8() in ppapi/c/ppb_var.h for more
+   * information.
+   */
+  if (var_result.type == PP_VARTYPE_STRING) {
+    ppb_var_interface->Release(var_result);
+  }
+  #endif
+}
+
 PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
                                        PPB_GetInterface get_browser) {
+  module_id = a_module_id;
+  ppb_messaging_interface =
+      (struct PPB_Messaging*)(get_browser(PPB_MESSAGING_INTERFACE));
+  ppb_var_interface = (struct PPB_Var*)(get_browser(PPB_VAR_INTERFACE));
+
   return PP_OK;
 }
 
 PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
+  if (strcmp(interface_name, PPP_INSTANCE_INTERFACE) == 0) {
+    static struct PPP_Instance instance_interface = {
+      &Instance_DidCreate,
+      &Instance_DidDestroy,
+      &Instance_DidChangeView,
+      &Instance_DidChangeFocus,
+      &Instance_HandleDocumentLoad,
+    };
+    return &instance_interface;
+  } else if (strcmp(interface_name, PPP_MESSAGING_INTERFACE) == 0) {
+    static struct PPP_Messaging messaging_interface = {
+      &Messaging_HandleMessage
+    };
+    return &messaging_interface;
+  }
   return NULL;
 }
 
