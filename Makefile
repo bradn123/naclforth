@@ -31,7 +31,11 @@ NACLFORTH32=$(DEPLOY_STATIC)/naclforth_x86-32.nexe
 NACLFORTH64=$(DEPLOY_STATIC)/naclforth_x86-64.nexe
 
 
-all: naclforth_web
+all: naclforth_web $(OUT)/naclforth2
+
+
+$(OUT)/naclforth2: naclforth2.c
+	gcc $< -o $@ -Wall -Werror -g -m32
 
 
 $(NACLFORTH32): $(OBJ)/naclforth_x86-32.o $(DEPLOY_STATIC)
