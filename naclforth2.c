@@ -216,7 +216,7 @@ static void Run(void) {
     SWORD(",", comma) SWORD(".", dot) WORD(emit)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
-    WORD(create) SWORD("does>", does)
+    WORD(create) SWORD("does>", does) WORD(variable) WORD(constant)
     IWORD(if) IWORD(else) IWORD(then)
     IWORD(begin) IWORD(again) IWORD(until)
     IWORD(while) IWORD(repeat)
@@ -276,6 +276,7 @@ static void Run(void) {
  __enter: *++rp = (cell_t)ip; ip = (DICTIONARY**)(nextw + 1); NEXT;
  __enter_create: *++sp = (cell_t)(nextw + 1); NEXT;
  __enter_does: *++rp = (cell_t)ip; ip = nextw->does;
+ __enter_constant: *++sp = *(cell_t*)(nextw + 1); NEXT;
   *++sp = (cell_t)(nextw + 1); NEXT;
  __exit: ip = *(DICTIONARY***)rp--; NEXT;
 
@@ -304,6 +305,24 @@ static void Run(void) {
     dictionary_head->code = && __enter_does;
     dictionary_head->does = (DICTIONARY**)here;
     compile_mode = 1;
+    NEXT;
+  }
+ _variable: {
+    unsigned char* name = Word();
+    Align();
+    COMMA(&& __enter_create); COMMA(name);
+    COMMA(FLAG_LINKED); COMMA(0); COMMA(dictionary_head);
+    dictionary_head = ((DICTIONARY*)here) - 1;
+    COMMA(0);
+    NEXT;
+  }
+ _constant: {
+    unsigned char* name = Word();
+    Align();
+    COMMA(&& __enter_constant); COMMA(name);
+    COMMA(FLAG_LINKED); COMMA(0); COMMA(dictionary_head);
+    dictionary_head = ((DICTIONARY*)here) - 1;
+    COMMA(*sp--);
     NEXT;
   }
 
