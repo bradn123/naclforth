@@ -170,6 +170,11 @@ static void Run(void) {
     {&& greater, ">", 0, 0},
     {&& gequal, ">=", 0, 0},
 
+    {&& _min, "min", 0, 0},
+    {&& _max, "max", 0, 0},
+
+    {&& gequal, ">=", 0, 0},
+
     {&& load, "@", 0, 0},
     {&& store, "!", 0, 0},
 
@@ -240,6 +245,9 @@ static void Run(void) {
  lequal: --sp; *sp = sp[0] <= sp[1]; NEXT; 
  greater: --sp; *sp = sp[0] > sp[1]; NEXT; 
  gequal: --sp; *sp = sp[0] >= sp[1]; NEXT; 
+
+ _min: --sp; if (sp[1] < sp[0]) { *sp = sp[1]; } NEXT; 
+ _max: --sp; if (sp[1] > sp[0]) { *sp = sp[1]; } NEXT; 
 
  load: *sp = *(cell_t*)*sp; NEXT;
  store: sp -= 2; *(cell_t*)sp[1] = sp[0]; NEXT;
