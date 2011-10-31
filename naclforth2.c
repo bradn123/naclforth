@@ -196,14 +196,16 @@ static void Run(void) {
 #define WORD_ZBRANCH (&base_dictionary[2])
     WORD(_exit)  // 3
 #define WORD_EXIT (&base_dictionary[3])
-    WORD(_imp_do) // 4
+    WORD(_imp_do)  // 4
 #define WORD_IMP_DO (&base_dictionary[4])
-    WORD(_imp_loop) // 5
+    WORD(_imp_loop)  // 5
 #define WORD_IMP_LOOP (&base_dictionary[5])
-    WORD(_imp_plus_loop) // 6
+    WORD(_imp_plus_loop)  // 6
 #define WORD_IMP_PLUS_LOOP (&base_dictionary[6])
-    WORD(quit) // 7
-#define WORD_QUIT (&base_dictionary[7])
+    WORD(_imp_does)  // 7
+#define WORD_IMP_DOES (&base_dictionary[7])
+    WORD(quit) // 8
+#define WORD_QUIT (&base_dictionary[8])
 
     SWORD(">r", push) SWORD("r>", pop)
     SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
@@ -213,10 +215,11 @@ static void Run(void) {
     WORD(min) WORD(max)
     SWORD("@", load) SWORD("!", store)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
-    SWORD(",", comma) SWORD(".", dot) WORD(emit)
+    SWORD(",", comma) WORD(here)
+    SWORD(".", dot) WORD(emit)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
-    WORD(create) SWORD("does>", does) WORD(variable) WORD(constant)
+    WORD(create) SIWORD("does>", does) WORD(variable) WORD(constant)
     IWORD(if) IWORD(else) IWORD(then)
     IWORD(begin) IWORD(again) IWORD(until)
     IWORD(while) IWORD(repeat)
@@ -265,6 +268,7 @@ static void Run(void) {
  _over: ++sp; *sp = sp[-2]; NEXT;
 
  _comma: COMMA(*sp--); NEXT;
+ _here: *++sp = (cell_t)here; NEXT;
 
  _dot: PrintNumber(*sp--); NEXT;
  _emit: fputc(*sp--, stdout); NEXT;
@@ -276,8 +280,8 @@ static void Run(void) {
  __enter: *++rp = (cell_t)ip; ip = (DICTIONARY**)(nextw + 1); NEXT;
  __enter_create: *++sp = (cell_t)(nextw + 1); NEXT;
  __enter_does: *++rp = (cell_t)ip; ip = nextw->does;
- __enter_constant: *++sp = *(cell_t*)(nextw + 1); NEXT;
   *++sp = (cell_t)(nextw + 1); NEXT;
+ __enter_constant: *++sp = *(cell_t*)(nextw + 1); NEXT;
  __exit: ip = *(DICTIONARY***)rp--; NEXT;
 
  _colon: {
@@ -301,10 +305,20 @@ static void Run(void) {
     dictionary_head = ((DICTIONARY*)here) - 1;
     NEXT;
   }
- _does: {
+ __imp_does: {
     dictionary_head->code = && __enter_does;
-    dictionary_head->does = (DICTIONARY**)here;
-    compile_mode = 1;
+    dictionary_head->does = *(DICTIONARY***)sp--;
+    NEXT;
+  }
+ _does: {
+    if (compile_mode) {
+      nextw = (DICTIONARY*)(here + 4);
+      COMMA(WORD_LIT); COMMA(nextw); COMMA(WORD_IMP_DOES); COMMA(WORD_EXIT);
+    } else {
+      *++sp = (cell_t)here;
+      compile_mode = 1;
+      goto __imp_does;
+    }
     NEXT;
   }
  _variable: {
