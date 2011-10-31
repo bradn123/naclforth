@@ -29,10 +29,10 @@ typedef long cell_t;
 typedef unsigned long ucell_t;
 
 typedef struct _DICTIONARY {
-  void* addr;
+  void* code;
   char* name;
   cell_t flags;
-  struct _DICTIONARY *next;
+  struct _DICTIONARY* next;
 } DICTIONARY;
 
 
@@ -58,14 +58,14 @@ static cell_t source_id = 0;
 static cell_t source_in = 0;
 
 
-#define NEXT { w = *(cell_t**)ip++; goto *(void**)w; }
+#define NEXT { nextw = *ip++; goto *nextw->code; }
 #define COMMA(val) { *here++ = (cell_t)(val); }
 #define FLAG_IMMEDIATE 1
 #define FLAG_LINKED 2
 #define FLAG_SMUDGE 4
 
 
-static void Find(const char *name, int name_len, cell_t *xt, cell_t *ret) {
+static void Find(const char* name, int name_len, DICTIONARY** xt, cell_t* ret) {
   DICTIONARY *pos = dictionary_head;
 
   while(pos && pos->name) {
@@ -77,7 +77,7 @@ static void Find(const char *name, int name_len, cell_t *xt, cell_t *ret) {
       } else {
         *ret = -1;
       }
-      *xt = (cell_t)pos;
+      *xt = pos;
       return;
     }
     // Follow links differently based on flags.
@@ -131,8 +131,8 @@ static void Align(void) {
 static void Run(void) {
   register cell_t* sp = sp_global;
   register cell_t* rp = rp_global;
-  register cell_t* ip = (cell_t*)*rp--;
-  register cell_t* w;
+  register DICTIONARY** ip = (DICTIONARY**)*rp--;
+  register DICTIONARY* nextw;
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -154,6 +154,9 @@ static void Run(void) {
 #define WORD__LOOP (&base_dictionary[6])
     {&& __plus_loop, "+loop", 0, 0},  // 7
 #define WORD__PLUS_LOOP (&base_dictionary[7])
+    
+    {&& quit, "quit", 0, 0},  // 8
+#define WORD_QUIT (&base_dictionary[8])
 
     {&& add, "+", 0, 0},
     {&& subtract, "-", 0, 0},
@@ -200,7 +203,6 @@ static void Run(void) {
     {&& compile, "compile,", 0},
 
     {&& find, "find", 0, 0},
-    {&& quit, "quit", 0, 0},
 
     {&& base, "base", 0, 0},
     {&& source_id, "source-id", 0, 0},
@@ -209,13 +211,13 @@ static void Run(void) {
     {0, 0, 0, 0},
   };
 
-  void *quit_loop[] = {&& quit};
+  DICTIONARY *quit_loop[] = {WORD_QUIT};
 
   // Start dictionary out with these.
   if (!dictionary_head) { dictionary_head = base_dictionary; }
 
   // Go to quit loop if nothing else.
-  if (!ip) { ip = (cell_t*)quit_loop; }
+  if (!ip) { ip = quit_loop; }
 
   // Go to work.
   NEXT;
@@ -242,12 +244,12 @@ static void Run(void) {
 
   dot: printf(" %d", (int)*sp--); NEXT;
 
-  lit: *++sp = *ip++; NEXT;
-  jump: ip = *(cell_t**)ip; NEXT;
-  zbranch: if (*sp--) { ++ip; } else { ip = *(cell_t**)ip; } NEXT;
+  lit: *++sp = *(cell_t*)ip++; NEXT;
+  jump: ip = *(DICTIONARY***)ip; NEXT;
+  zbranch: if (*sp--) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
 
-  _enter: *++rp = (cell_t)ip; ip = 4 + w; NEXT;
-  _exit: ip = (cell_t*)*rp--; NEXT;
+  _enter: *++rp = (cell_t)ip; ip = (DICTIONARY**)(nextw + 1); NEXT;
+  _exit: ip = (DICTIONARY**)*rp--; NEXT;
 
   colon: {
     char* name = Word();
@@ -279,13 +281,13 @@ static void Run(void) {
   _i: *++sp = rp[-1]; NEXT;
   _do: COMMA(WORD_PUSH); COMMA(WORD_PUSH);
        *++sp = (cell_t)here; NEXT;
-  __loop: ++rp[-1]; if (rp[-1] == rp[0]) { ++ip; } else { ip = (cell_t*)*ip; } NEXT;
+  __loop: ++rp[-1]; if (rp[-1] == rp[0]) { ++ip; } else { ip = (DICTIONARY**)*ip; } NEXT;
   _loop: COMMA(WORD__LOOP); COMMA(*sp--); NEXT;
-  __plus_loop: rp[-1] += *sp--; if (rp[-1] == rp[0]) { ++ip; } else { ip = (cell_t*)*ip; } NEXT;
+  __plus_loop: rp[-1] += *sp--; if (rp[-1] == rp[0]) { ++ip; } else { ip = (DICTIONARY**)*ip; } NEXT;
   _plus_loop: COMMA(WORD__PLUS_LOOP); COMMA(*sp--); NEXT;
 
   find: ++sp; Find(1+(const char*)sp[-1], *(unsigned char*)sp[-1],
-                   &sp[-1], &sp[0]); NEXT;
+                   (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
   quit:
         if (source_in >= source_length) {
           Ok();
@@ -304,13 +306,13 @@ static void Run(void) {
           int pos = source_in;
           while (pos < source_length && source[pos] != ' ') { ++pos; }
           cell_t found;
-          cell_t xt;
+          DICTIONARY* xt;
           Find((char*)&source[source_in], pos - source_in, &xt, &found);
           source_in = pos + 1;
           if ((found == 1 && compile_mode) || (found && !compile_mode)) {
             --ip;
-            w = (cell_t*)xt;
-            goto **(void***)w;
+            nextw = xt;
+            goto *nextw->code;
           } else if (found) {
             COMMA(xt);
           } else {
