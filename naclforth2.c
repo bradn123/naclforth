@@ -163,6 +163,23 @@ static int ToNumber(const unsigned char *str, cell_t len, cell_t *dst) {
   return 1;
 }
 
+static void PrintNumber(cell_t value) {
+  static char digit[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  static char buf[20];
+  int len = 0;
+  
+  printf(" ");
+  if (value < 0) { value = -value; printf("-"); }
+  do {
+    buf[len++] = digit[value % number_base];
+    value /= number_base;
+  } while (value);
+  while (len) {
+    fputc(buf[len - 1], stdout);
+    --len;
+  }
+}
+
 static void Run(void) {
   register cell_t* sp = sp_global;
   register cell_t* rp = rp_global;
@@ -205,7 +222,8 @@ static void Run(void) {
     IWORD(while) IWORD(repeat)
     IWORD(do) IWORD(loop) SIWORD("+loop", plus_loop) WORD(i)
     WORD(literal) SWORD("compile,", compile) WORD(find)
-    WORD(base) SWORD("source-id", source_id)
+    WORD(base) WORD(decimal) WORD(hex)
+    SWORD("source-id", source_id)
     WORD(yield) END_OF_DICTIONARY  // This must go last.
   };
 
@@ -236,7 +254,7 @@ static void Run(void) {
  _max: --sp; if (sp[1] > sp[0]) { *sp = sp[1]; } NEXT; 
 
  _load: *sp = *(cell_t*)*sp; NEXT;
- _store: sp -= 2; *(cell_t*)sp[1] = sp[0]; NEXT;
+ _store: sp -= 2; *(cell_t*)sp[2] = sp[1]; NEXT;
 
  _push: *++rp = *sp--; NEXT;
  _pop: *++sp = *rp--; NEXT;
@@ -248,7 +266,7 @@ static void Run(void) {
 
  _comma: COMMA(*sp--); NEXT;
 
- _dot: printf(" %d", (int)*sp--); NEXT;
+ _dot: PrintNumber(*sp--); NEXT;
  _emit: fputc(*sp--, stdout); NEXT;
 
  __lit: *++sp = *(cell_t*)ip++; NEXT;
@@ -359,6 +377,9 @@ static void Run(void) {
  _compile: goto _comma;
 
  _base: *++sp = (cell_t)&number_base; NEXT;
+ _decimal: number_base = 10; NEXT;
+ _hex: number_base = 16; NEXT;
+
  _source_id: *++sp = source_id; NEXT;
 
   // Exit from run.
