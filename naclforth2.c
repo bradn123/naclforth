@@ -49,15 +49,15 @@ static DICTIONARY* dictionary_head = 0;
 static cell_t compile_mode = 0;
 static cell_t number_base = 10;
 
-static unsigned char input_buffer[1024];
-
 // Input source
+static unsigned char input_buffer[1024];
 static unsigned char *source = 0;
 static cell_t source_length = 0;
 static cell_t source_id = 0;
 static cell_t source_in = 0;
 
 
+// Dictionary and flow macros.
 #define NEXT { nextw = *ip++; goto *nextw->code; }
 #define COMMA(val) { *here++ = (cell_t)(val); }
 #define FLAG_IMMEDIATE 1
