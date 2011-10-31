@@ -163,6 +163,13 @@ static void Run(void) {
     {&& multiply, "*", 0, 0},
     {&& divide, "/", 0, 0},
 
+    {&& equal, "=", 0, 0},
+    {&& nequal, "<>", 0, 0},
+    {&& less, "<", 0, 0},
+    {&& lequal, "<=", 0, 0},
+    {&& greater, ">", 0, 0},
+    {&& gequal, ">=", 0, 0},
+
     {&& load, "@", 0, 0},
     {&& store, "!", 0, 0},
 
@@ -225,7 +232,14 @@ static void Run(void) {
  add: --sp; *sp += sp[1]; NEXT;
  subtract: --sp; *sp -= sp[1]; NEXT;
  multiply: --sp; *sp *= sp[1]; NEXT;
- divide: --sp; *sp /= sp[1]; NEXT; 
+ divide: --sp; *sp /= sp[1]; NEXT;
+
+ equal: --sp; *sp = sp[0] == sp[1]; NEXT; 
+ nequal: --sp; *sp = sp[0] != sp[1]; NEXT; 
+ less: --sp; *sp = sp[0] < sp[1]; NEXT; 
+ lequal: --sp; *sp = sp[0] <= sp[1]; NEXT; 
+ greater: --sp; *sp = sp[0] > sp[1]; NEXT; 
+ gequal: --sp; *sp = sp[0] >= sp[1]; NEXT; 
 
  load: *sp = *(cell_t*)*sp; NEXT;
  store: sp -= 2; *(cell_t*)sp[1] = sp[0]; NEXT;
