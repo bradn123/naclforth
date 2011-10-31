@@ -131,7 +131,7 @@ static void Align(void) {
 static void Run(void) {
   register cell_t* sp = sp_global;
   register cell_t* rp = rp_global;
-  register DICTIONARY** ip = (DICTIONARY**)*rp--;
+  register DICTIONARY** ip = *(DICTIONARY***)rp--;
   register DICTIONARY* nextw;
 
   static DICTIONARY base_dictionary[] = {
@@ -222,36 +222,36 @@ static void Run(void) {
   // Go to work.
   NEXT;
 
-  add: --sp; *sp += sp[1]; NEXT;
-  subtract: --sp; *sp -= sp[1]; NEXT;
-  multiply: --sp; *sp *= sp[1]; NEXT;
-  divide: --sp; *sp /= sp[1]; NEXT; 
+ add: --sp; *sp += sp[1]; NEXT;
+ subtract: --sp; *sp -= sp[1]; NEXT;
+ multiply: --sp; *sp *= sp[1]; NEXT;
+ divide: --sp; *sp /= sp[1]; NEXT; 
 
-  load: *sp = *(cell_t*)*sp; NEXT;
-  store: sp -= 2; *(cell_t*)sp[1] = sp[0]; NEXT;
+ load: *sp = *(cell_t*)*sp; NEXT;
+ store: sp -= 2; *(cell_t*)sp[1] = sp[0]; NEXT;
 
-  push: *++rp = *sp--; NEXT;
-  pop: *++sp = *rp--; NEXT;
+ push: *++rp = *sp--; NEXT;
+ pop: *++sp = *rp--; NEXT;
 
-  one: *++sp = 1; NEXT;
+ one: *++sp = 1; NEXT;
   
-  dup: ++sp; sp[0] = sp[-1]; NEXT;
-  drop: --sp; NEXT;
-  swap: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[1]; NEXT;
-  over: ++sp; *sp = sp[-2]; NEXT;
+ dup: ++sp; sp[0] = sp[-1]; NEXT;
+ drop: --sp; NEXT;
+ swap: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[1]; NEXT;
+ over: ++sp; *sp = sp[-2]; NEXT;
 
-  comma: COMMA(*sp--); NEXT;
+ comma: COMMA(*sp--); NEXT;
 
-  dot: printf(" %d", (int)*sp--); NEXT;
+ dot: printf(" %d", (int)*sp--); NEXT;
 
-  lit: *++sp = *(cell_t*)ip++; NEXT;
-  jump: ip = *(DICTIONARY***)ip; NEXT;
-  zbranch: if (*sp--) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
+ lit: *++sp = *(cell_t*)ip++; NEXT;
+ jump: ip = *(DICTIONARY***)ip; NEXT;
+ zbranch: if (*sp--) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
 
-  _enter: *++rp = (cell_t)ip; ip = (DICTIONARY**)(nextw + 1); NEXT;
-  _exit: ip = (DICTIONARY**)*rp--; NEXT;
+ _enter: *++rp = (cell_t)ip; ip = (DICTIONARY**)(nextw + 1); NEXT;
+ _exit: ip = *(DICTIONARY***)rp--; NEXT;
 
-  colon: {
+ colon: {
     char* name = Word();
     Align();
     COMMA(&& _enter); COMMA(name);
@@ -259,78 +259,78 @@ static void Run(void) {
     compile_mode = 1; dictionary_head = (DICTIONARY*)(here - 4);
     NEXT;
   }
-  semicolon: COMMA(WORD_EXIT); compile_mode = 0;
-             dictionary_head->flags &= (~FLAG_SMUDGE); NEXT;
-  immediate: dictionary_head->flags |= FLAG_IMMEDIATE; NEXT;
-  lbracket: compile_mode = 0; NEXT;
-  rbracket: compile_mode = 1; NEXT;
+ semicolon: COMMA(WORD_EXIT); compile_mode = 0;
+  dictionary_head->flags &= (~FLAG_SMUDGE); NEXT;
+ immediate: dictionary_head->flags |= FLAG_IMMEDIATE; NEXT;
+ lbracket: compile_mode = 0; NEXT;
+ rbracket: compile_mode = 1; NEXT;
 
-  _if: COMMA(WORD_ZBRANCH); *++sp = (cell_t)here; COMMA(0); NEXT;
-  _then: *(cell_t*)*sp = (cell_t)here; NEXT;
-  _else: COMMA(WORD_JUMP); *(cell_t*)*sp = (cell_t)(here + 1);
-         *++sp = (cell_t)here ; COMMA(0); NEXT;
+ _if: COMMA(WORD_ZBRANCH); *++sp = (cell_t)here; COMMA(0); NEXT;
+ _then: *(cell_t*)*sp = (cell_t)here; NEXT;
+ _else: COMMA(WORD_JUMP); *(cell_t*)*sp = (cell_t)(here + 1);
+  *++sp = (cell_t)here ; COMMA(0); NEXT;
 
-  _begin: *++sp = (cell_t)here; NEXT;
-  _again: COMMA(WORD_JUMP); COMMA(*sp--); NEXT;
-  _until: COMMA(WORD_ZBRANCH); COMMA(*sp--); NEXT;
+ _begin: *++sp = (cell_t)here; NEXT;
+ _again: COMMA(WORD_JUMP); COMMA(*sp--); NEXT;
+ _until: COMMA(WORD_ZBRANCH); COMMA(*sp--); NEXT;
          
-  _while: COMMA(WORD_ZBRANCH); *++sp = (cell_t)here; COMMA(0); NEXT;
-  _repeat: COMMA(WORD_JUMP); COMMA(sp[-1]);
-           *(cell_t*)*sp = (cell_t)here; sp -= 2; NEXT;
+ _while: COMMA(WORD_ZBRANCH); *++sp = (cell_t)here; COMMA(0); NEXT;
+ _repeat: COMMA(WORD_JUMP); COMMA(sp[-1]);
+  *(cell_t*)*sp = (cell_t)here; sp -= 2; NEXT;
 
-  _i: *++sp = rp[-1]; NEXT;
-  _do: COMMA(WORD_PUSH); COMMA(WORD_PUSH);
-       *++sp = (cell_t)here; NEXT;
-  __loop: ++rp[-1]; if (rp[-1] == rp[0]) { ++ip; } else { ip = (DICTIONARY**)*ip; } NEXT;
-  _loop: COMMA(WORD__LOOP); COMMA(*sp--); NEXT;
-  __plus_loop: rp[-1] += *sp--; if (rp[-1] == rp[0]) { ++ip; } else { ip = (DICTIONARY**)*ip; } NEXT;
-  _plus_loop: COMMA(WORD__PLUS_LOOP); COMMA(*sp--); NEXT;
+ _i: *++sp = rp[-1]; NEXT;
+ _do: COMMA(WORD_PUSH); COMMA(WORD_PUSH);
+  *++sp = (cell_t)here; NEXT;
+ __loop: ++rp[-1]; if (rp[-1] == rp[0]) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
+ _loop: COMMA(WORD__LOOP); COMMA(*sp--); NEXT;
+ __plus_loop: rp[-1] += *sp--; if (rp[-1] == rp[0]) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
+ _plus_loop: COMMA(WORD__PLUS_LOOP); COMMA(*sp--); NEXT;
 
-  find: ++sp; Find(1+(const char*)sp[-1], *(unsigned char*)sp[-1],
-                   (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
-  quit:
-        if (source_in >= source_length) {
-          Ok();
-          source_in = 0;
-          source_id = 0;
-          ReadLine();
-        }
-        // Skip space.
-        while (source_in < source_length && source[source_in] == ' ') {
-          ++source_in;
-        }
-        if (source_in >= source_length) {
-          goto quit;
-        }
-        {
-          int pos = source_in;
-          while (pos < source_length && source[pos] != ' ') { ++pos; }
-          cell_t found;
-          DICTIONARY* xt;
-          Find((char*)&source[source_in], pos - source_in, &xt, &found);
-          source_in = pos + 1;
-          if ((found == 1 && compile_mode) || (found && !compile_mode)) {
-            --ip;
-            nextw = xt;
-            goto *nextw->code;
-          } else if (found) {
-            COMMA(xt);
-          } else {
-            printf("Unknown word\n");
-            source_in = source_length;
-          }
-        }
-        --ip;
-        NEXT;
+ find: ++sp; Find(1+(const char*)sp[-1], *(unsigned char*)sp[-1],
+                  (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
+ quit:
+  if (source_in >= source_length) {
+    Ok();
+    source_in = 0;
+    source_id = 0;
+    ReadLine();
+  }
+  // Skip space.
+  while (source_in < source_length && source[source_in] == ' ') {
+    ++source_in;
+  }
+  if (source_in >= source_length) {
+    goto quit;
+  }
+  {
+    int pos = source_in;
+    while (pos < source_length && source[pos] != ' ') { ++pos; }
+    cell_t found;
+    DICTIONARY* xt;
+    Find((char*)&source[source_in], pos - source_in, &xt, &found);
+    source_in = pos + 1;
+    if ((found == 1 && compile_mode) || (found && !compile_mode)) {
+      --ip;
+      nextw = xt;
+      goto *nextw->code;
+    } else if (found) {
+      COMMA(xt);
+    } else {
+      printf("Unknown word\n");
+      source_in = source_length;
+    }
+  }
+  --ip;
+  NEXT;
 
-  literal: COMMA(WORD_LIT); COMMA(*sp--); NEXT;
-  compile: goto comma;
+ literal: COMMA(WORD_LIT); COMMA(*sp--); NEXT;
+ compile: goto comma;
 
-  base: *++sp = (cell_t)&number_base; NEXT;
-  source_id: *++sp = source_id; NEXT;
+ base: *++sp = (cell_t)&number_base; NEXT;
+ source_id: *++sp = source_id; NEXT;
 
   // Exit from run.
-  yield: sp_global = sp; rp_global = rp;
+ yield: sp_global = sp; rp_global = rp;
 }
 
 int main(void) {
