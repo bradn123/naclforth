@@ -227,6 +227,7 @@ static void Run(void) {
     IWORD(begin) IWORD(again) IWORD(until)
     IWORD(while) IWORD(repeat)
     IWORD(do) SIWORD("?do", qdo) IWORD(loop) SIWORD("+loop", plus_loop)
+    SWORD("sp@", spload) SWORD("sp!", spstore) SWORD("rp@", rpload) SWORD("rp!", rpstore)
     WORD(i) WORD(j)
     WORD(leave) WORD(exit) WORD(unloop)
     WORD(literal) SWORD("compile,", compile) WORD(find)
@@ -251,12 +252,12 @@ static void Run(void) {
  _multiply: --sp; *sp *= sp[1]; NEXT;
  _divide: --sp; *sp /= sp[1]; NEXT;
 
- _equal: --sp; *sp = sp[0] == sp[1]; NEXT; 
- _nequal: --sp; *sp = sp[0] != sp[1]; NEXT; 
- _less: --sp; *sp = sp[0] < sp[1]; NEXT; 
- _lequal: --sp; *sp = sp[0] <= sp[1]; NEXT; 
- _greater: --sp; *sp = sp[0] > sp[1]; NEXT; 
- _gequal: --sp; *sp = sp[0] >= sp[1]; NEXT; 
+ _equal: --sp; *sp = sp[0] == sp[1] ? -1 : 0; NEXT; 
+ _nequal: --sp; *sp = sp[0] != sp[1] ? -1 : 0; NEXT; 
+ _less: --sp; *sp = sp[0] < sp[1] ? -1 : 0; NEXT; 
+ _lequal: --sp; *sp = sp[0] <= sp[1] ? -1 : 0; NEXT; 
+ _greater: --sp; *sp = sp[0] > sp[1] ? -1 : 0; NEXT; 
+ _gequal: --sp; *sp = sp[0] >= sp[1] ? -1 : 0; NEXT; 
 
  _min: --sp; if (sp[1] < sp[0]) { *sp = sp[1]; } NEXT; 
  _max: --sp; if (sp[1] > sp[0]) { *sp = sp[1]; } NEXT; 
@@ -291,7 +292,7 @@ static void Run(void) {
   
  _exit: ip = *(DICTIONARY***)rp--; NEXT;
  _unloop: rp -= 3; NEXT;
- _leave: ip = *(DICTIONARY***)rp[-2]; rp -= 3; NEXT;
+ _leave: ip = (DICTIONARY**)rp[-2]; rp -= 3; NEXT;
 
  _colon: {
     unsigned char* name = Word();
@@ -350,8 +351,8 @@ static void Run(void) {
   }
 
  _if: COMMA(WORD_ZBRANCH); *++sp = (cell_t)here; COMMA(0); NEXT;
- _then: *(cell_t*)*sp = (cell_t)here; NEXT;
- _else: COMMA(WORD_JUMP); *(cell_t*)*sp = (cell_t)(here + 1);
+ _then: *(cell_t*)*sp-- = (cell_t)here; NEXT;
+ _else: COMMA(WORD_JUMP); *(cell_t*)*sp-- = (cell_t)(here + 1);
   *++sp = (cell_t)here ; COMMA(0); NEXT;
 
  _begin: *++sp = (cell_t)here; NEXT;
@@ -362,13 +363,19 @@ static void Run(void) {
  _repeat: COMMA(WORD_JUMP); COMMA(sp[-1]);
   *(cell_t*)*sp = (cell_t)here; sp -= 2; NEXT;
 
+ _spload: ++sp; *sp = (cell_t)sp; NEXT;
+ _spstore: sp = (cell_t*)*sp; NEXT;
+ _rpload: *++sp = (cell_t)rp; NEXT;
+ _rpstore: rp = (cell_t*)*sp--; NEXT;
+  
  _i: *++sp = rp[-1]; NEXT;
  _j: *++sp = rp[-4]; NEXT;
 
  __imp_do: *++rp = *(cell_t*)ip++; *++rp = *sp--; *++rp = *sp--; NEXT;
  _do: COMMA(WORD_IMP_DO); *++sp = (cell_t)here; COMMA(0); NEXT;
  __imp_qdo: {
-    if (sp[0] == sp[1]) {
+    if (sp[-1] == sp[0]) {
+      sp -= 2;
       ip = *(DICTIONARY***)ip;
     } else {
       goto __imp_do;
@@ -385,18 +392,18 @@ static void Run(void) {
     }
     NEXT;
   }
- _loop_common: COMMA(1 + (cell_t*)*sp); *(cell_t**)sp-- = here; NEXT;
- _loop: COMMA(WORD_IMP_LOOP); goto _loop_common;
  __imp_plus_loop: {
     rp[-1] += *sp--;
-    if (rp[-1] == rp[0]) {
+    cell_t tmp = rp[-1] - rp[0];
+    if (tmp >= 0 && tmp < sp[1]) {
       ++ip; rp -= 3;
     } else {
       ip = *(DICTIONARY***)ip;
     }
     NEXT;
   }
- __imp_plus_loop: rp[-1] += *sp--; goto __imp_loop_common;
+ _loop_common: COMMA(1 + (cell_t*)*sp); *(cell_t**)*sp-- = here; NEXT;
+ _loop: COMMA(WORD_IMP_LOOP); goto _loop_common;
  _plus_loop: COMMA(WORD_IMP_PLUS_LOOP); goto _loop_common;
 
  _find: ++sp; Find(1 + (const unsigned char*)sp[-1], *(unsigned char*)sp[-1],
