@@ -11,7 +11,7 @@ RODATA_START=0x4800000
 
 
 CFLAGS=-O2 -Wall -Werror -DRODATA_START=${RODATA_START}
-LFLAGS=${CFLAGS} -Wl,--section-start,.rodata=${RODATA_START}
+#LFLAGS=${CFLAGS} -Wl,--section-start,.rodata=${RODATA_START}
 LIBS=-lppapi -lnacl_dyncode -lpthread
 
 
@@ -60,12 +60,16 @@ naclforth_web: $(NACLFORTH32) \
                $(NACLFORTH64) \
                $(DEPLOY_STATIC)/nacl4th.ico \
                $(DEPLOY_STATIC)/nacl4th.png \
+               $(DEPLOY_STATIC)/naclforth.nmf \
                $(DEPLOY)/naclforth.py \
                $(DEPLOY)/app.yaml \
                $(DEPLOY)/index.yaml \
                $(DEPLOY)/naclforth.html
 
 $(DEPLOY)/naclforth.html: naclforth.html
+	cp $< $@
+
+$(DEPLOY_STATIC)/naclforth.nmf: naclforth.nmf
 	cp $< $@
 
 $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):

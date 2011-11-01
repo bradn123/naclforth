@@ -104,10 +104,15 @@ static void Find(const unsigned char* name, cell_t name_len,
 }
 
 static void Ok(void) {
+#ifndef __native_client__
   printf("  ok\n");
+#endif
 }
 
 static void ReadLine(void) {
+#ifdef __native_client__
+  exit(0);
+#endif
   fgets((char*)input_buffer, sizeof(input_buffer), stdin);
   source = input_buffer;
   source_length = strlen((char*)input_buffer);
@@ -237,6 +242,7 @@ static void Run(void) {
     WORD(literal) SWORD("compile,", compile) WORD(find)
     WORD(base) WORD(decimal) WORD(hex)
     SWORD("source-id", source_id)
+    WORD(bye)
     WORD(yield) END_OF_DICTIONARY  // This must go last.
   };
 
@@ -464,6 +470,8 @@ static void Run(void) {
 
  _source_id: *++sp = source_id; NEXT;
 
+ _bye: exit(0); goto _bye;
+
   // Exit from run.
  _yield: sp_global = sp; rp_global = rp;
 }
@@ -520,8 +528,9 @@ static void Messaging_HandleMessage(
     /* Only handle string messages */
     return;
   }
+  fprintf(stderr, "HandleMessage!!!\n");
   msg = ppb_var_interface->VarToUtf8(var_message, &len);
-  source = (unsigned char*)msg;
+  source = (unsigned char*)strdup(msg);
   source_length = len;
   source_id = 0;
   source_in = 0;

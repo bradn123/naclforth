@@ -16,8 +16,7 @@
     <META HTTP-EQUIV="Expires" CONTENT="-1">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
   </head>
-  <body onload="init()"
-        bgcolor="#000000"
+  <body bgcolor="#000000"
         link="#0000ff"
         alink="#0000ff"
         vlink="#0000ff"><font color="#ffffff">
@@ -30,9 +29,20 @@
     {% endif %}
     </div>
 
-    <embed type="application/x-nacl" id="forth"
-           name="forth" width="0" height="0"
-           nmf="naclforth.nmf"/>
+    <div id="listener">
+      <script type="text/javascript">
+        function moduleDidLoad() {
+          var forth = document.getElementById('forth');
+          forth.postMessage(': test1 100 0 do i . cr loop ; test1 yield');
+        }
+
+        document.getElementById('listener').addEventListener(
+        'load', moduleDidLoad, true);
+      </script>
+      <embed type="application/x-nacl" id="forth"
+             name="forth" width="0" height="0"
+             src="naclforth.nmf"/>
+    </div>
 
     <div id="out"></div>
 
@@ -191,45 +201,6 @@
       function set_out(value) {
         var out = document.getElementById('out');
         out.innerHTML = value;
-      }
-
-      function init() {
-        var boot_info = [
-            '{{ user_id }}',
-            '{{ section_quota }}',
-            '{{ index_quota }}',
-            '{{ boot_user_id }}',
-            '{{ boot_section }}',
-            '{{ boot_index }}',
-            '{{ boot_start }}',
-        ];
-        if (boot_info[0].substr(0, 1) == '{') {
-          boot_info = [-1, 0, 0, -1, -1, -1, 0];
-        } else {
-          for (var x = 0; x < boot_info.length; x++) {
-            boot_info[x] = parseInt(boot_info[x]);
-          }
-        }
-        var url;
-        if (boot_info[5] == -1) {
-          url = '/naclforth.boot';
-        } else {
-          url = '/read?owner=' + boot_info[3] +
-                '&section=' + boot_info[4] +
-                '&index=' + boot_info[5] + '&count=4';
-        }
-        http_request(url, 'GET', null, function(status, data) {
-          if (status != 200) {
-            set_out('Loading boot area failed!');
-            return;
-          }
-          forth = document.getElementById('forth');
-          check_for_ready(forth, function() {
-            var values = decode_blocks(data);
-            forth.boot(values, boot_info);
-            start_events();
-          });
-        });
       }
 
       //]]>

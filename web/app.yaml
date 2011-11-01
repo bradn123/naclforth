@@ -15,6 +15,12 @@ handlers:
   static_files: static/nacl4th.png
   upload: static/nacl4th.png
 
+- url: /naclforth.nmf
+  static_files: static/naclforth.nmf
+  upload: static/naclforth.nmf
+  mime_type: application/octet-stream
+  expiration: "5s"
+
 - url: /naclforth_x86-32.nexe
   static_files: static/naclforth_x86-32.nexe
   upload: static/naclforth_x86-32.nexe

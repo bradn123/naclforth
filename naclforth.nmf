@@ -1,6 +1,6 @@
 {
-  "nexes": {
-    "x86-32": "forth.nexe",
-    "x86-64": "forth.nexe",
-  },
+  "program": {
+    "x86-32": {"url": "naclforth_x86-32.nexe"},
+    "x86-64": {"url": "naclforth_x86-64.nexe"}
+  }
 }
