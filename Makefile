@@ -72,7 +72,10 @@ $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
 	mkdir -p $@
 
 deploy: naclforth_web
-	appcfg.py update web
+	appcfg.py update out/deploy
+
+local: naclforth_web
+	dev_appserver.py out/deploy
 
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
