@@ -178,6 +178,7 @@ static void PrintNumber(cell_t value) {
     fputc(buf[len - 1], stdout);
     --len;
   }
+  fflush(stdout);
 }
 
 static void Run(void) {
@@ -194,18 +195,20 @@ static void Run(void) {
 #define WORD_JUMP (&base_dictionary[1])
     WORD(_zbranch)  // 2
 #define WORD_ZBRANCH (&base_dictionary[2])
-    WORD(_exit)  // 3
+    WORD(exit)  // 3
 #define WORD_EXIT (&base_dictionary[3])
     WORD(_imp_do)  // 4
 #define WORD_IMP_DO (&base_dictionary[4])
-    WORD(_imp_loop)  // 5
-#define WORD_IMP_LOOP (&base_dictionary[5])
-    WORD(_imp_plus_loop)  // 6
-#define WORD_IMP_PLUS_LOOP (&base_dictionary[6])
-    WORD(_imp_does)  // 7
-#define WORD_IMP_DOES (&base_dictionary[7])
-    WORD(quit) // 8
-#define WORD_QUIT (&base_dictionary[8])
+    WORD(_imp_qdo)  // 5
+#define WORD_IMP_QDO (&base_dictionary[5])
+    WORD(_imp_loop)  // 6
+#define WORD_IMP_LOOP (&base_dictionary[6])
+    WORD(_imp_plus_loop)  // 7
+#define WORD_IMP_PLUS_LOOP (&base_dictionary[7])
+    WORD(_imp_does)  // 8
+#define WORD_IMP_DOES (&base_dictionary[8])
+    WORD(quit) // 9
+#define WORD_QUIT (&base_dictionary[9])
 
     SWORD(">r", push) SWORD("r>", pop)
     SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
@@ -216,14 +219,16 @@ static void Run(void) {
     SWORD("@", load) SWORD("!", store)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
     SWORD(",", comma) WORD(here)
-    SWORD(".", dot) WORD(emit)
+    SWORD(".", dot) WORD(emit) WORD(cr)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
     WORD(create) SIWORD("does>", does) WORD(variable) WORD(constant)
     IWORD(if) IWORD(else) IWORD(then)
     IWORD(begin) IWORD(again) IWORD(until)
     IWORD(while) IWORD(repeat)
-    IWORD(do) IWORD(loop) SIWORD("+loop", plus_loop) WORD(i)
+    IWORD(do) SIWORD("?do", qdo) IWORD(loop) SIWORD("+loop", plus_loop)
+    WORD(i) WORD(j)
+    WORD(leave) WORD(exit) WORD(unloop)
     WORD(literal) SWORD("compile,", compile) WORD(find)
     WORD(base) WORD(decimal) WORD(hex)
     SWORD("source-id", source_id)
@@ -272,6 +277,7 @@ static void Run(void) {
 
  _dot: PrintNumber(*sp--); NEXT;
  _emit: fputc(*sp--, stdout); NEXT;
+ _cr: fputc('\n', stdout); NEXT;
 
  __lit: *++sp = *(cell_t*)ip++; NEXT;
  __jump: ip = *(DICTIONARY***)ip; NEXT;
@@ -282,7 +288,10 @@ static void Run(void) {
  __enter_does: *++rp = (cell_t)ip; ip = nextw->does;
   *++sp = (cell_t)(nextw + 1); NEXT;
  __enter_constant: *++sp = *(cell_t*)(nextw + 1); NEXT;
- __exit: ip = *(DICTIONARY***)rp--; NEXT;
+  
+ _exit: ip = *(DICTIONARY***)rp--; NEXT;
+ _unloop: rp -= 3; NEXT;
+ _leave: ip = *(DICTIONARY***)rp[-2]; rp -= 3; NEXT;
 
  _colon: {
     unsigned char* name = Word();
@@ -354,12 +363,41 @@ static void Run(void) {
   *(cell_t*)*sp = (cell_t)here; sp -= 2; NEXT;
 
  _i: *++sp = rp[-1]; NEXT;
- __imp_do: *++rp = *sp--; *++rp = *sp--; NEXT;
- _do: COMMA(WORD_IMP_DO); *++sp = (cell_t)here; NEXT;
- __imp_loop: ++rp[-1]; if (rp[-1] == rp[0]) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
- _loop: COMMA(WORD_IMP_LOOP); COMMA(*sp--); NEXT;
- __imp_plus_loop: rp[-1] += *sp--; if (rp[-1] == rp[0]) { ++ip; } else { ip = *(DICTIONARY***)ip; } NEXT;
- _plus_loop: COMMA(WORD_IMP_PLUS_LOOP); COMMA(*sp--); NEXT;
+ _j: *++sp = rp[-4]; NEXT;
+
+ __imp_do: *++rp = *(cell_t*)ip++; *++rp = *sp--; *++rp = *sp--; NEXT;
+ _do: COMMA(WORD_IMP_DO); *++sp = (cell_t)here; COMMA(0); NEXT;
+ __imp_qdo: {
+    if (sp[0] == sp[1]) {
+      ip = *(DICTIONARY***)ip;
+    } else {
+      goto __imp_do;
+    }
+    NEXT;
+  }
+ _qdo: COMMA(WORD_IMP_QDO); *++sp = (cell_t)here; COMMA(0); NEXT;
+ __imp_loop: {
+    ++rp[-1];
+    if (rp[-1] == rp[0]) {
+      ++ip; rp -= 3;
+    } else {
+      ip = *(DICTIONARY***)ip;
+    }
+    NEXT;
+  }
+ _loop_common: COMMA(1 + (cell_t*)*sp); *(cell_t**)sp-- = here; NEXT;
+ _loop: COMMA(WORD_IMP_LOOP); goto _loop_common;
+ __imp_plus_loop: {
+    rp[-1] += *sp--;
+    if (rp[-1] == rp[0]) {
+      ++ip; rp -= 3;
+    } else {
+      ip = *(DICTIONARY***)ip;
+    }
+    NEXT;
+  }
+ __imp_plus_loop: rp[-1] += *sp--; goto __imp_loop_common;
+ _plus_loop: COMMA(WORD_IMP_PLUS_LOOP); goto _loop_common;
 
  _find: ++sp; Find(1 + (const unsigned char*)sp[-1], *(unsigned char*)sp[-1],
                    (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
