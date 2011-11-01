@@ -27,12 +27,6 @@ handlers:
   mime_type: application/octet-stream
   expiration: "5s"
 
-- url: /naclforth.boot
-  static_files: static/naclforth.boot
-  upload: static/naclforth.boot
-  mime_type: application/octet-stream
-  expiration: "5s"
-
 - url: /.*
   script: naclforth.py
   secure: always

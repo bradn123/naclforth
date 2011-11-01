@@ -34,7 +34,7 @@ NACLFORTH64=$(DEPLOY_STATIC)/naclforth_x86-64.nexe
 all: naclforth_web $(OUT)/naclforth
 
 
-$(OUT)/naclforth: naclforth2.c
+$(OUT)/naclforth: naclforth.c
 	gcc $< -o $@ -Wall -Werror -g -m32
 
 
@@ -46,10 +46,10 @@ $(NACLFORTH64): $(OBJ)/naclforth_x86-64.o $(DEPLOY_STATIC)
 	${CC64} -o $@ $< ${LFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@
 
-$(OBJ)/naclforth_x86-32.o: naclforth2.c $(OBJ)
+$(OBJ)/naclforth_x86-32.o: naclforth.c $(OBJ)
 	${CC32} -o $@ -c $< ${CFLAGS_X86_32}
 
-$(OBJ)/naclforth_x86-64.o: naclforth2.c $(OBJ)
+$(OBJ)/naclforth_x86-64.o: naclforth.c $(OBJ)
 	${CC64} -o $@ -c $< ${CFLAGS_X86_64}
 
 $(DEPLOY)/%: web/%
@@ -58,16 +58,12 @@ $(DEPLOY)/%: web/%
 
 naclforth_web: $(NACLFORTH32) \
                $(NACLFORTH64) \
-               $(DEPLOY_STATIC)/naclforth.boot \
                $(DEPLOY_STATIC)/nacl4th.ico \
                $(DEPLOY_STATIC)/nacl4th.png \
                $(DEPLOY)/naclforth.py \
                $(DEPLOY)/app.yaml \
                $(DEPLOY)/index.yaml \
                $(DEPLOY)/naclforth.html
-
-$(DEPLOY_STATIC)/naclforth.boot: naclforth.boot
-	cp $< $@
 
 $(DEPLOY)/naclforth.html: naclforth.html
 	cp $< $@
@@ -77,9 +73,6 @@ $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
 
 deploy: naclforth_web
 	appcfg.py update web
-
-grab:
-	curl 'https://naclforth.appspot.com/read?owner=0&section=0&index=0&count=4' -o naclforth.boot
 
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
