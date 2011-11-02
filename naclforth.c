@@ -160,6 +160,15 @@ static void Ok(void) {
   PrintCstr("  ok\n");
 }
 
+static cell_t Parse(cell_t sep) {
+  cell_t ret = source_in;
+
+  while (ret < source_length && source[ret] != sep) {
+    ++ret;
+  }
+  return ret;
+}
+
 static char* Word(void) {
   char* ret = (char*)here;
   // Skip whitespace.
@@ -237,6 +246,7 @@ static void Run(void) {
   register DICTIONARY* nextw;
   char ch;
   cell_t len;
+  cell_t *x;
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -283,8 +293,13 @@ static void Run(void) {
     WORD(leave) WORD(exit) WORD(unloop)
     WORD(literal) SWORD("compile,", compile) WORD(find)
     WORD(base) WORD(decimal) WORD(hex)
+    WORD(fill) WORD(move) WORD(cmove) SWORD("cmove>", cmove2)
     SWORD("source-id", source_id)
+    SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(yield)
+#ifdef __native_client__
+    WORD(post) WORD(inbound)
+#endif
 
     END_OF_DICTIONARY  // This must go last.
   };
@@ -486,7 +501,7 @@ static void Run(void) {
       Ok();
       ReadLine();
       --ip;
-      return;
+      goto _yield;
     }
 #else
     Ok();
@@ -538,11 +553,41 @@ static void Run(void) {
  _decimal: number_base = 10; NEXT;
  _hex: number_base = 16; NEXT;
 
+ _fill: ch = (char)*sp--; len = *sp--; memset((char*)*sp--, ch, len); NEXT;
+ _move: len = *sp--; x = (cell_t*)*sp--; memmove(x, (char*)*sp--, len); NEXT;
+ _cmove: goto _move;
+ _cmove2: goto _move;
+
  _source_id: *++sp = source_id; NEXT;
 
- _bye: exit(0); goto _bye;
+ _lparen: source_in = Parse(')') + 1; NEXT;
+ _squote: {
+    if (compile_mode) {
+      len = Parse('"');
+      *++sp = (cell_t)malloc(len - source_in);
+      assert(*sp);
+      memcpy((char*)*sp, &source[source_in], len - source_in);
+      COMMA(WORD_LIT); COMMA(*sp--);
+      COMMA(WORD_LIT); COMMA(len - source_in);
+      source_in = len + 1;
+    } else {
+      *++sp = (cell_t)&source[source_in];
+      len = Parse('"');
+      *++sp = len - source_in;
+      source_in = len + 1;
+    }
+    NEXT;
+  }
+ _backslash: source_in = Parse('\n') + 1; NEXT;
 
+ _bye: exit(0); goto _bye;
+  
  _yield: sp_global = sp; rp_global = rp; return;
+  
+#ifdef __native_client__  
+ _post: len = *sp--; PostMessage((const char*)*sp--, len); NEXT;
+ _inbound: *++sp = (cell_t)inbound_message; *++sp = inbound_message_length; NEXT;
+#endif
 }
 
 

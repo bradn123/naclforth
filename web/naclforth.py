@@ -12,10 +12,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 
-DEFAULT_SECTION_QUOTA = 1000
-DEFAULT_INDEX_QUOTA = 1000
-MAX_BLOCK_SIZE = 32 * 1024
-MAX_READ_COUNT = 4
+MAX_FILE_SIZE = 1024 * 1024
 
 
 class UserCounter(db.Model):
@@ -25,14 +22,11 @@ class UserCounter(db.Model):
 class UserInfo(db.Model):
   who = db.UserProperty()
   id = db.IntegerProperty()
-  section_quota = db.IntegerProperty()
-  index_quota = db.IntegerProperty()
 
 
-class Block(db.Model):
+class File(db.Model):
   owner = db.IntegerProperty()
-  section = db.IntegerProperty()
-  index = db.IntegerProperty()
+  filename = db.StringProperty()
   data = db.BlobProperty()
 
 
@@ -51,8 +45,6 @@ def AllocId():
 def GetUserInfo():
   info = {
       'id': -1,
-      'section_quota': 0,
-      'index_quota': 0
   }
 
   who = users.get_current_user()
@@ -78,8 +70,6 @@ def GetUserInfo():
 
   info = {
       'id': uinfo.id,
-      'section_quota': uinfo.section_quota,
-      'index_quota': uinfo.index_quota,
   }
 
   memcache.add(user_key, info, 60)
@@ -91,111 +81,81 @@ class ReadHandler(webapp.RequestHandler):
   def get(self):
     self.post()
 
+  def get(self):
+    self.post()
+    
   def post(self):
     owner = int(self.request.get('owner'))
-    section = int(self.request.get('section'))
-    index = int(self.request.get('index'))
-    count = int(self.request.get('count', 1))
+    filename = self.request.get('filename')
 
-    logging.debug('reading %d,%d,%d count %d' % (owner, section, index, count))
+    logging.debug('reading %d:%s' % (owner, filename))
 
-    # Limit how much we can read at once.
-    if count < 1 or count > MAX_READ_COUNT:
-      logging.debug('read count out of range %d' % count)
-      return
-
-    # Only need to check permissions if not in the public section (0).
-    if section != 0:
+    # Check access rights.
+    if not filename.startswith('/public/'):
       uinfo = GetUserInfo()
-      # Only you can read blocks outside the public section.
+      # Only you can read files outside /public/.
       if uinfo['id'] != owner:
         self.response.set_status(403)  # forbidden
         return
 
-    total = ''
-    for i in range(count):
-      key = 'block_%d_%d_%d' % (owner, section, index + i)
+    key = 'file_%d_%s' % (owner, filename)
 
-      data = memcache.get(key)
-      if not data:
-        b = Block.get(db.Key.from_path('Block', key))
-        if not b:
-          logging.debug('failed read')
-          self.reponse.set_status(404)  # not found
-          return
-        else:
-          logging.debug('read from datastore')
-        data = b.data
+    data = memcache.get(key)
+    if not data:
+      f = File.get(db.Key.from_path('File', key))
+      if not f:
+        logging.debug('failed read')
+        self.response.set_status(404)  # not found
+        return
       else:
-        logging.debug('read from memcache')
-
-      total += data
+        logging.debug('read from datastore')
+        data = f.data
+    else:
+      logging.debug('read from memcache')
 
     self.response.headers['Content-type'] = 'application/octet-stream'
-    self.response.out.write(total)
+    self.response.out.write(data)
     logging.debug('read success')
 
 
 class WriteHandler(webapp.RequestHandler):
   def post(self):
-    owner = int(self.request.get('owner'))
-    section = int(self.request.get('section'))
-    index = int(self.request.get('index'))
+    filename = self.request.get('filename')
     data = self.request.get('data')
-
-    # Decode from the eclectic escaping needed to make it across form data.
-    data = data.replace(
-        ';r', '\r').replace(
-        ';n', '\n').replace(
-        ';0', '\0').replace(
-        ';s', ';').encode('latin1')
-
+                  
     # Fail if input is too big.
-    if len(data) > MAX_BLOCK_SIZE:
+    if len(data) > MAX_FILE_SIZE:
       self.response.set_status(400)  # bad request
       return
 
     # Only you can write your own blocks.
     uinfo = GetUserInfo()
-    # Only you can read blocks outside the public section.
-    if uinfo['id'] != owner:
+    # You can only write if logged in.
+    if uinfo['id'] == -1:
       self.response.set_status(403)  # forbidden
-      logging.debug('owner %d not match %d' % (uinfo['id'], owner))
-      return
-    # It must be in range.
-    if (index < 0 or index >= uinfo['index_quota'] or
-        section < 0 or section >= uinfo['section_quota']):
-      self.response.set_status(403)  # forbidden
-      logging.debug('outside range %d %d / %d %d' % (
-        index, section, uinfo['index_quota'], uinfo['section_quota']))
+      logging.debug('not logged in')
       return
 
-    key = 'block_%d_%d_%d' % (owner, section, index)
+    key = 'file_%d_%s' % (owner, filename)
 
-    b = Block(key = db.Key.from_path('Block', key))
-    b.owner = owner
-    b.section = section
-    b.index = index
-    b.data = data
-    b.put()
+    f = File(key=key)
+    f.owner = uinfo['id']
+    f.filname = filename
+    f.data = data
+    f.put()
       
-    logging.debug('wrote %d to %d,%d,%d' % (
-        len(data), owner, section, index))
-
-    memcache.set(key, data, 60)
+    memcache.set(key, data)
+                  
+    logging.debug('wrote %d to %d:%s' % (en(data), owner, name))
 
 
 class MainPageHandler(webapp.RequestHandler):
   def get(self):
+    boot = self.request.get('boot', '/_read?owner=0&filename=%2fpublic%2f_boot')
     uinfo = GetUserInfo()
     fields = {
         'user_id': uinfo['id'],
-        'section_quota': uinfo['section_quota'],
-        'index_quota': uinfo['index_quota'],
-        'boot_user_id': int(self.request.get('bootuserid', 0)),
-        'boot_section': int(self.request.get('bootsection', 0)),
-        'boot_index': int(self.request.get('bootindex', 0)),
-        'boot_start': int(self.request.get('boot', 0)),
+        'boot': boot,
     }
     who = users.get_current_user()
     if who:
@@ -211,8 +171,8 @@ class MainPageHandler(webapp.RequestHandler):
 
 application = webapp.WSGIApplication([
     ('/', MainPageHandler),
-    ('/read', ReadHandler),
-    ('/write', WriteHandler),
+    ('/_read', ReadHandler),
+    ('/_write', WriteHandler),
 ], debug=True)
 
 

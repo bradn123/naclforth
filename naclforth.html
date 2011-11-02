@@ -5,7 +5,6 @@
     <link href="/favicon.ico" rel="SHORTCUT ICON">
     <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
     <META HTTP-EQUIV="Expires" CONTENT="-1">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <style type="text/css">
       body {
         background-color: #eeeeff;
@@ -170,19 +169,29 @@
             alert('Unknown message prefix "' + prefix + '"');
           }
         }
+
+        function start(text) {
+          startEvents();
+          forth = document.getElementById('forth');
+          forth.addEventListener('message', handleMessage);
+          forth.postMessage(text);
+        }
         
         function moduleDidLoad() {
-          //httpRequest('{{ boot }}', 'GET', {}, function(status, text) {
-          var status = 200; var text = '';
-            if (status != 200) {
-              alert('Unable to load boot code!');
-              return;
-            }
-            startEvents();
-            forth = document.getElementById('forth');
-            forth.addEventListener('message', handleMessage);
-            forth.postMessage(text);
-          //});
+          var boot = '{{ boot }}';
+          if (boot == '') {
+            start('');
+          } else {
+            httpRequest('{{ boot }}', 'GET', {}, function(status, text) {
+              if (status == 200) {
+                start(text);
+              } else {
+                alert('Unable to load boot code!');
+                start('');
+                return;
+              }
+            });
+          }
         }
 
         document.getElementById('listener').addEventListener(

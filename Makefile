@@ -22,7 +22,7 @@ LFLAGS_X86_64=${LFLAGS}
 
 
 OUT=out
-DEPLOY=$(OUT)/deploy
+DEPLOY=$(OUT)/deploy_appengine
 DEPLOY_STATIC=$(DEPLOY)/static
 OBJ=$(OUT)/obj
 
@@ -38,11 +38,11 @@ $(OUT)/naclforth: naclforth.c
 	gcc $< -o $@ -Wall -Werror -g -m32
 
 
-$(NACLFORTH32): $(OBJ)/naclforth_x86-32.o $(DEPLOY_STATIC)
+$(NACLFORTH32): $(OBJ)/naclforth_x86-32.o | $(DEPLOY_STATIC)
 	${CC32} -o $@ $< ${LFLAGS_X86_32} ${LIBS}
 	${STRIP32} $@
 
-$(NACLFORTH64): $(OBJ)/naclforth_x86-64.o $(DEPLOY_STATIC)
+$(NACLFORTH64): $(OBJ)/naclforth_x86-64.o | $(DEPLOY_STATIC)
 	${CC64} -o $@ $< ${LFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@
 
@@ -76,10 +76,10 @@ $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
 	mkdir -p $@
 
 deploy: naclforth_web
-	appcfg.py update out/deploy
+	appcfg.py update $(DEPLOY)
 
 local: naclforth_web
-	dev_appserver.py out/deploy
+	dev_appserver.py -d $(DEPLOY)
 
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
