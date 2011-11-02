@@ -23,7 +23,6 @@ static struct PPB_Messaging* ppb_messaging_interface = NULL;
 static struct PPB_Var* ppb_var_interface = NULL;
 static PP_Module pp_module = 0;
 static PP_Instance pp_instance = 0;
-static int pp_state = 0;
 
 #endif
 
@@ -80,6 +79,9 @@ static cell_t source_in = 0;
 
 #ifdef __native_client__
 
+static char *inbound_message = 0;
+static cell_t inbound_message_length = 0;
+
 static void PostMessage(const char *data, cell_t len) {
   struct PP_Var msg = ppb_var_interface->VarFromUtf8(pp_module, (const char*)data, len);
   ppb_messaging_interface->PostMessage(pp_instance, msg);
@@ -91,7 +93,7 @@ static void Print(const char *data, cell_t len) {
 
   tmp = malloc(len + 1);
   assert(tmp);
-  tmp[0] = 'p';
+  tmp[0] = 'o';
   memcpy(tmp + 1, data, len);
   PostMessage(tmp, len + 1);
   free(tmp);
@@ -161,10 +163,10 @@ static void Ok(void) {
 static char* Word(void) {
   char* ret = (char*)here;
   // Skip whitespace.
-  while(source_in < source_length && source[source_in] == ' ') {
+  while(source_in < source_length && isspace((int)source[source_in])) {
     ++source_in;
   }
-  while(source_in < source_length && source[source_in] != ' ') {
+  while(source_in < source_length && !isspace((int)source[source_in])) {
     *(char*)here = source[source_in];
     here = (cell_t*)(1 + (char*)here);
     ++source_in;
@@ -234,6 +236,7 @@ static void Run(void) {
   register DICTIONARY** ip = *(DICTIONARY***)rp--;
   register DICTIONARY* nextw;
   char ch;
+  cell_t len;
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -267,7 +270,7 @@ static void Run(void) {
     SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
     SWORD(",", comma) WORD(here)
-    SWORD(".", dot) WORD(emit) WORD(cr)
+    SWORD(".", dot) WORD(type) WORD(emit) WORD(cr) WORD(page)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
     WORD(create) SIWORD("does>", does) WORD(variable) WORD(constant)
@@ -329,8 +332,16 @@ static void Run(void) {
  _here: *++sp = (cell_t)here; NEXT;
 
  _dot: PrintNumber(*sp--); NEXT;
+ _type: len = *sp--; Print((char*)*sp--, len); NEXT;
  _emit: ch = (char)*sp--; Print(&ch, 1); NEXT;
  _cr: PrintCstr("\n"); NEXT;
+ _page:
+#ifdef __native_client__
+  PostMessage("p", 1);
+#else
+  PrintCstr("\f");
+#endif
+  NEXT;
 
  __lit: *++sp = *(cell_t*)ip++; NEXT;
  __jump: ip = *(DICTIONARY***)ip; NEXT;
@@ -462,17 +473,28 @@ static void Run(void) {
                    (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
  _quit:
   if (source_in >= source_length) {
-    Ok();
     source_in = 0;
     source_id = 0;
-    ReadLine();
+    source_length = 0;
 #ifdef __native_client__
-    --ip;
-    return;
+    if (inbound_message) {
+      source = inbound_message;
+      source_length = inbound_message_length;
+      inbound_message = 0;
+      inbound_message_length = 0;
+    } else {
+      Ok();
+      ReadLine();
+      --ip;
+      return;
+    }
+#else
+    Ok();
+    ReadLine();
 #endif
   }
   // Skip space.
-  while (source_in < source_length && source[source_in] == ' ') {
+  while (source_in < source_length && isspace((int)source[source_in])) {
     ++source_in;
   }
   if (source_in >= source_length) {
@@ -481,7 +503,7 @@ static void Run(void) {
   {
     cell_t start = source_in;
     while (source_in < source_length &&
-           source[source_in] != ' ') { ++source_in; }
+           !isspace((int)source[source_in])) { ++source_in; }
     if (source_in <= start) goto _quit;
     cell_t found;
     DICTIONARY* xt;
@@ -501,7 +523,7 @@ static void Run(void) {
       }
     } else {
       PrintCstr("Unknown word: ");
-      Print(&source[start], source_in - start);
+      Print(&source[start], source_in - start - 1);
       PrintCstr("\n");
       source_in = source_length;
     }
@@ -578,15 +600,13 @@ static void Messaging_HandleMessage(
     return;
   }
 
-  if (pp_state == 0) {  // Boot
-    pp_state = 1;
-    source = (char*)ppb_var_interface->VarToUtf8(var_message, &len);
-    source_length = len;
-    source_id = 0;
-    source_in = 0;
-    Run();
-  } else if (pp_state == 1) { // TODO
-  }
+  inbound_message = (char*)ppb_var_interface->VarToUtf8(var_message, &len);
+  inbound_message_length = len;
+  fprintf(stderr, "\nGot:\n");
+  fwrite(inbound_message, 1, inbound_message_length, stderr);
+  fprintf(stderr, "\n\n");
+  
+  Run();
 }
 
 PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,

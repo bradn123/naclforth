@@ -1,54 +1,112 @@
 <html>
   <head>
-    <title>Native Client Forth</title>
+    <title>NativeClient Forth</title>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <link href="/favicon.ico" rel="SHORTCUT ICON">
     <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
     <META HTTP-EQUIV="Expires" CONTENT="-1">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <style type="text/css">
+      body {
+        background-color: #eeeeff;
+        color: #000000;
+      }
+      a:link {
+        color: blue;
+      }
+      a:visited {
+        color: blue;
+      }
+      div.console {
+        font-family: "Courier New"
+                     Courier
+                     "Andale Mono"
+                     "Fixed"
+                     "Lucidatypewriter"
+                     monospace;
+        font-size: 20px;
+      }
+      span.email {
+        color: #000000;
+      }
+      span.cursor {
+        background-color: #000077;
+      }
+    </style>
   </head>
-  <body bgcolor="#000000"
-        link="#0000ff"
-        alink="#0000ff"
-        vlink="#0000ff"><font color="#ffffff">
+  <body>
     <div id="login" align="right">
     {% if signed_in %}
-      <font color="#777777">[ {{ email }} ]</font>
+      <span class="email">[ {{ email }} ]</span>
       <a href="{{ sign_out }}">Sign out</a>
     {% else %}
       <a href="{{ sign_in }}">Sign in</a>
     {% endif %}
     </div>
+    
+    <hr color="#333333"/>
 
     <div id="listener">
       <script type="text/javascript">
         var forth;
-        var cursor_text = '|';
+        var cursor_text = '<span class="cursor">&nbsp;</span>';
         var out_buffer = '';
+        var accept_buffer = '';
+        var reading_line = false;
         var event_buffer = '';
 
         function startEvents() {
           document.onkeypress = function(evt) {
             var ch = evt.which;
             if (ch == undefined) ch = evt.keyCode;
-            event_buffer += String.fromCharCode(ch));
+            event_buffer += String.fromCharCode(ch);
+            processKeys();
             return false;
           };
           document.onkeydown = function(evt) {
-            event_buffer += String.fromCharCode(evt.keyCode + 256));
+            event_buffer += String.fromCharCode(evt.keyCode + 256);
+            processKeys();
             if (evt.keyCode == 8) return false;
             return true;
           };
           document.onkeyup = function(evt) {
-            event_buffer += String.fromCharCode(evt.keyCode + 512));
+            event_buffer += String.fromCharCode(evt.keyCode + 512);
+            processKeys();
             if (evt.keyCode == 8) return false;
             return true;
           };
         }
+
+        function processKeys() {
+          if (!reading_line) return;
+          for (var i = 0; i < event_buffer.length; i++) {
+            var ch = event_buffer.substr(i, 1);
+            var code = event_buffer.charCodeAt(i);
+            if (code == 8 || code == 8 + 256) {
+              if (accept_buffer.length) {
+                accept_buffer = accept_buffer.substr(0, accept_buffer.length - 1);
+              }
+            } else if (code == 13) {
+              reading_line = false;
+              var line = accept_buffer;
+              accept_buffer = '';
+              out_buffer += (line + '<br>\n');
+              event_buffer = event_buffer.substr(i + 1);
+              refreshOut();
+              forth.postMessage(line);
+              return;
+            } else if (code >= 32 && code <= 126) {
+              accept_buffer += ch;
+            }
+          }
+          event_buffer = '';
+          refreshOut();
+        }
   
         function refreshOut() {
           var out = document.getElementById('out');
-          out.innerHTML = out_buffer + cursor_text;
+          out.innerHTML = out_buffer + accept_buffer + cursor_text;
+          window.scrollTo(0, document.body.scrollHeight);
         }
 
         function httpRequest(url, method, values, callback) {
@@ -88,11 +146,25 @@
             out_buffer = '';
             refreshOut();
           } else if (prefix == 'o') {
-            out_buffer += rest;
+            var out = ''
+            for (var i = 0; i < rest.length; i++) {
+              var ch = rest.substr(i, 1);
+              if (ch == '\n') {
+                out += '<br>\n';
+              } else if (ch == '\r') {
+              } else {
+                out += ch;
+              }
+            }
+            out_buffer += out;
             refreshOut();
           } else if (prefix == 'i') {
-            forth.postMessage(event_buffer);
+            var tmp = event_buffer;
             event_buffer = '';
+            forth.postMessage(tmp);
+          } else if (prefix == 'r') {
+            reading_line = true;
+            processKeys();
           } else if (prefix == 'h') {
           } else {
             alert('Unknown message prefix "' + prefix + '"');
@@ -100,7 +172,8 @@
         }
         
         function moduleDidLoad() {
-          httpRequest('{{ boot }}', 'GET', {}, function(status, text) {
+          //httpRequest('{{ boot }}', 'GET', {}, function(status, text) {
+          var status = 200; var text = '';
             if (status != 200) {
               alert('Unable to load boot code!');
               return;
@@ -109,7 +182,7 @@
             forth = document.getElementById('forth');
             forth.addEventListener('message', handleMessage);
             forth.postMessage(text);
-          });
+          //});
         }
 
         document.getElementById('listener').addEventListener(
@@ -119,6 +192,6 @@
              width="0" height="0" src="naclforth.nmf"/>
     </div>
 
-    <div id="out"></div>
-  </font></body>
+    <div id="out" class="console"></div>
+  </div></body>
 </html>
