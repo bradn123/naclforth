@@ -31,8 +31,13 @@
 
     <div id="listener">
       <script type="text/javascript">
+        function handleMessage(msg) {
+          alert(msg.data);
+        }
+        
         function moduleDidLoad() {
           var forth = document.getElementById('forth');
+          forth.addEventListener('message', handleMessage);
           forth.postMessage(': test1 100 0 do i . cr loop ; test1 yield');
         }
 

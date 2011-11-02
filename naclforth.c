@@ -492,6 +492,13 @@ static void Setup(void) {
 
 #ifdef __native_client__
 
+static void PostMessage(PP_Instance instance,
+                        const unsigned char *data, cell_t len) {
+  struct PP_Var msg = ppb_var_interface->VarFromUtf8(module_id, (const char*)data, len);
+  ppb_messaging_interface->PostMessage(instance, msg);
+  ppb_var_interface->Release(msg);
+}
+
 static PP_Bool Instance_DidCreate(PP_Instance instance,
                                   uint32_t argc,
                                   const char* argn[],
@@ -522,19 +529,20 @@ static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
 static void Messaging_HandleMessage(
     PP_Instance instance, struct PP_Var var_message) {
   uint32_t len = 0;
-  const char* msg;
 
   if (var_message.type != PP_VARTYPE_STRING) {
     /* Only handle string messages */
     return;
   }
-  fprintf(stderr, "HandleMessage!!!\n");
-  msg = ppb_var_interface->VarToUtf8(var_message, &len);
-  source = (unsigned char*)strdup(msg);
+  //ppb_var_interface->AddRef(var_message);
+  source = (unsigned char*)ppb_var_interface->VarToUtf8(var_message, &len);
   source_length = len;
   source_id = 0;
   source_in = 0;
   Run();
+  fflush(stdout);
+  fprintf(stderr, "Done with boot, now posting.\n");
+  PostMessage(instance, (const unsigned char*)"hi", 2);
 }
 
 PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
