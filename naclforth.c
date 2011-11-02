@@ -21,7 +21,10 @@
 
 static struct PPB_Messaging* ppb_messaging_interface = NULL;
 static struct PPB_Var* ppb_var_interface = NULL;
-static PP_Module module_id = 0;
+static PP_Module pp_module = 0;
+static PP_Instance pp_instance = 0;
+static int pp_state = 0;
+
 #endif
 
 
@@ -56,8 +59,7 @@ static cell_t compile_mode = 0;
 static cell_t number_base = 10;
 
 // Input source
-static unsigned char input_buffer[1024];
-static unsigned char *source = 0;
+static char *source = 0;
 static cell_t source_length = 0;
 static cell_t source_id = 0;
 static cell_t source_in = 0;
@@ -76,7 +78,56 @@ static cell_t source_in = 0;
 #define END_OF_DICTIONARY  {0, 0, 0, 0, 0},
 
 
-static void Find(const unsigned char* name, cell_t name_len,
+#ifdef __native_client__
+
+static void PostMessage(const char *data, cell_t len) {
+  struct PP_Var msg = ppb_var_interface->VarFromUtf8(pp_module, (const char*)data, len);
+  ppb_messaging_interface->PostMessage(pp_instance, msg);
+  ppb_var_interface->Release(msg);
+}
+
+static void Print(const char *data, cell_t len) {
+  char *tmp;
+
+  tmp = malloc(len + 1);
+  assert(tmp);
+  tmp[0] = 'p';
+  memcpy(tmp + 1, data, len);
+  PostMessage(tmp, len + 1);
+  free(tmp);
+}
+
+static void ReadLine(void) {
+  PostMessage("r", 1);
+}
+
+#else
+
+static void Print(const char *data, cell_t len) {
+  fwrite(data, 1, len, stdout);
+  fflush(stdout);
+}
+
+static void ReadLine(void) {
+  static char input_buffer[1024];
+
+  fgets((char*)input_buffer, sizeof(input_buffer), stdin);
+  source = input_buffer;
+  source_length = strlen((char*)input_buffer);
+  if (source_length > 0 && source[source_length - 1] == '\n') {
+    --source_length;
+  }
+}
+
+#endif
+
+
+static void PrintCstr(const char *str) {
+  Print(str, strlen(str));
+}
+
+
+static void Find(const char* name, cell_t name_len,
                  DICTIONARY** xt, cell_t* ret) {
   DICTIONARY *pos = dictionary_head;
 
@@ -104,48 +155,34 @@ static void Find(const unsigned char* name, cell_t name_len,
 }
 
 static void Ok(void) {
-#ifndef __native_client__
-  printf("  ok\n");
-#endif
+  PrintCstr("  ok\n");
 }
 
-static void ReadLine(void) {
-#ifdef __native_client__
-  exit(0);
-#endif
-  fgets((char*)input_buffer, sizeof(input_buffer), stdin);
-  source = input_buffer;
-  source_length = strlen((char*)input_buffer);
-  if (source_length > 0 && source[source_length - 1] == '\n') {
-    --source_length;
-  }
-}
-
-static unsigned char* Word(void) {
-  unsigned char* ret = (unsigned char*)here;
+static char* Word(void) {
+  char* ret = (char*)here;
   // Skip whitespace.
   while(source_in < source_length && source[source_in] == ' ') {
     ++source_in;
   }
   while(source_in < source_length && source[source_in] != ' ') {
-    *(unsigned char*)here = source[source_in];
-    here = (cell_t*)(1 + (unsigned char*)here);
+    *(char*)here = source[source_in];
+    here = (cell_t*)(1 + (char*)here);
     ++source_in;
   }
   ++source_in;
   // Add null.
-  *(unsigned char*)here = 0;
-  here = (cell_t*)(1 + (unsigned char*)here);
+  *(char*)here = 0;
+  here = (cell_t*)(1 + (char*)here);
   return ret;
 }
 
 static void Align(void) {
   while (((cell_t)here) % sizeof(cell_t) != 0) {
-    here = (cell_t*)(1 + (unsigned char*)here);
+    here = (cell_t*)(1 + (char*)here);
   }
 }
 
-static int DigitValue(unsigned char ch) {
+static int DigitValue(int ch) {
   ch = tolower(ch);
 
   if (ch >= '0' && ch <= '9') return ch - '0';
@@ -153,7 +190,7 @@ static int DigitValue(unsigned char ch) {
   return -1;
 }
 
-static int ToNumber(const unsigned char *str, cell_t len, cell_t *dst) {
+static int ToNumber(const char *str, cell_t len, cell_t *dst) {
   int negative = 0;
   int digit;
 
@@ -176,18 +213,19 @@ static void PrintNumber(cell_t value) {
   static char digit[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   static char buf[20];
   int len = 0;
+  static char out[20];
+  int out_len = 0;
   
-  printf(" ");
-  if (value < 0) { value = -value; printf("-"); }
+  out[out_len++] = ' ';
+  if (value < 0) { value = -value; out[out_len++] = '-'; }
   do {
     buf[len++] = digit[value % number_base];
     value /= number_base;
   } while (value);
   while (len) {
-    fputc(buf[len - 1], stdout);
-    --len;
+    out[out_len++] = buf[--len];
   }
-  fflush(stdout);
+  Print(out, out_len);
 }
 
 static void Run(void) {
@@ -195,6 +233,7 @@ static void Run(void) {
   register cell_t* rp = rp_global;
   register DICTIONARY** ip = *(DICTIONARY***)rp--;
   register DICTIONARY* nextw;
+  char ch;
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -225,7 +264,7 @@ static void Run(void) {
     SWORD("<", less) SWORD("<=", lequal)
     SWORD(">", greater) SWORD(">=", gequal)
     WORD(min) WORD(max)
-    SWORD("@", load) SWORD("!", store)
+    SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
     SWORD(",", comma) WORD(here)
     SWORD(".", dot) WORD(emit) WORD(cr)
@@ -242,8 +281,9 @@ static void Run(void) {
     WORD(literal) SWORD("compile,", compile) WORD(find)
     WORD(base) WORD(decimal) WORD(hex)
     SWORD("source-id", source_id)
-    WORD(bye)
-    WORD(yield) END_OF_DICTIONARY  // This must go last.
+    WORD(bye) WORD(yield)
+
+    END_OF_DICTIONARY  // This must go last.
   };
 
   DICTIONARY *quit_loop[] = {WORD_QUIT};
@@ -274,6 +314,8 @@ static void Run(void) {
 
  _load: *sp = *(cell_t*)*sp; NEXT;
  _store: sp -= 2; *(cell_t*)sp[2] = sp[1]; NEXT;
+ _cload: *sp = *(unsigned char*)*sp; NEXT;
+ _cstore: sp -= 2; *(unsigned char*)sp[2] = sp[1]; NEXT;
 
  _push: *++rp = *sp--; NEXT;
  _pop: *++sp = *rp--; NEXT;
@@ -287,8 +329,8 @@ static void Run(void) {
  _here: *++sp = (cell_t)here; NEXT;
 
  _dot: PrintNumber(*sp--); NEXT;
- _emit: fputc(*sp--, stdout); NEXT;
- _cr: fputc('\n', stdout); NEXT;
+ _emit: ch = (char)*sp--; Print(&ch, 1); NEXT;
+ _cr: PrintCstr("\n"); NEXT;
 
  __lit: *++sp = *(cell_t*)ip++; NEXT;
  __jump: ip = *(DICTIONARY***)ip; NEXT;
@@ -305,7 +347,7 @@ static void Run(void) {
  _leave: ip = (DICTIONARY**)rp[-2]; rp -= 3; NEXT;
 
  _colon: {
-    unsigned char* name = Word();
+    char* name = Word();
     Align();
     COMMA(&& __enter); COMMA(name); COMMA(FLAG_SMUDGE | FLAG_LINKED);
     COMMA(0); COMMA(dictionary_head);
@@ -318,7 +360,7 @@ static void Run(void) {
  _lbracket: compile_mode = 0; NEXT;
  _rbracket: compile_mode = 1; NEXT;
  _create: {
-    unsigned char* name = Word();
+    char* name = Word();
     Align();
     COMMA(&& __enter_create); COMMA(name);
     COMMA(FLAG_LINKED); COMMA(0); COMMA(dictionary_head);
@@ -342,7 +384,7 @@ static void Run(void) {
     NEXT;
   }
  _variable: {
-    unsigned char* name = Word();
+    char* name = Word();
     Align();
     COMMA(&& __enter_create); COMMA(name);
     COMMA(FLAG_LINKED); COMMA(0); COMMA(dictionary_head);
@@ -351,7 +393,7 @@ static void Run(void) {
     NEXT;
   }
  _constant: {
-    unsigned char* name = Word();
+    char* name = Word();
     Align();
     COMMA(&& __enter_constant); COMMA(name);
     COMMA(FLAG_LINKED); COMMA(0); COMMA(dictionary_head);
@@ -416,7 +458,7 @@ static void Run(void) {
  _loop: COMMA(WORD_IMP_LOOP); goto _loop_common;
  _plus_loop: COMMA(WORD_IMP_PLUS_LOOP); goto _loop_common;
 
- _find: ++sp; Find(1 + (const unsigned char*)sp[-1], *(unsigned char*)sp[-1],
+ _find: ++sp; Find(1 + (const char*)sp[-1], *(char*)sp[-1],
                    (DICTIONARY**)&sp[-1], &sp[0]); NEXT;
  _quit:
   if (source_in >= source_length) {
@@ -424,6 +466,10 @@ static void Run(void) {
     source_in = 0;
     source_id = 0;
     ReadLine();
+#ifdef __native_client__
+    --ip;
+    return;
+#endif
   }
   // Skip space.
   while (source_in < source_length && source[source_in] == ' ') {
@@ -454,7 +500,9 @@ static void Run(void) {
         *++sp = found;
       }
     } else {
-      printf("Unknown word\n");
+      PrintCstr("Unknown word: ");
+      Print(&source[start], source_in - start);
+      PrintCstr("\n");
       source_in = source_length;
     }
   }
@@ -472,8 +520,7 @@ static void Run(void) {
 
  _bye: exit(0); goto _bye;
 
-  // Exit from run.
- _yield: sp_global = sp; rp_global = rp;
+ _yield: sp_global = sp; rp_global = rp; return;
 }
 
 
@@ -492,17 +539,13 @@ static void Setup(void) {
 
 #ifdef __native_client__
 
-static void PostMessage(PP_Instance instance,
-                        const unsigned char *data, cell_t len) {
-  struct PP_Var msg = ppb_var_interface->VarFromUtf8(module_id, (const char*)data, len);
-  ppb_messaging_interface->PostMessage(instance, msg);
-  ppb_var_interface->Release(msg);
-}
-
 static PP_Bool Instance_DidCreate(PP_Instance instance,
                                   uint32_t argc,
                                   const char* argn[],
                                   const char* argv[]) {
+  // Assuming one instance for now.
+  assert(!pp_instance);
+  pp_instance = instance;
   Setup();
 
   return PP_TRUE;
@@ -534,20 +577,21 @@ static void Messaging_HandleMessage(
     /* Only handle string messages */
     return;
   }
-  //ppb_var_interface->AddRef(var_message);
-  source = (unsigned char*)ppb_var_interface->VarToUtf8(var_message, &len);
-  source_length = len;
-  source_id = 0;
-  source_in = 0;
-  Run();
-  fflush(stdout);
-  fprintf(stderr, "Done with boot, now posting.\n");
-  PostMessage(instance, (const unsigned char*)"hi", 2);
+
+  if (pp_state == 0) {  // Boot
+    pp_state = 1;
+    source = (char*)ppb_var_interface->VarToUtf8(var_message, &len);
+    source_length = len;
+    source_id = 0;
+    source_in = 0;
+    Run();
+  } else if (pp_state == 1) { // TODO
+  }
 }
 
 PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
                                        PPB_GetInterface get_browser) {
-  module_id = a_module_id;
+  pp_module = a_module_id;
   ppb_messaging_interface =
       (struct PPB_Messaging*)(get_browser(PPB_MESSAGING_INTERFACE));
   ppb_var_interface = (struct PPB_Var*)(get_browser(PPB_VAR_INTERFACE));
