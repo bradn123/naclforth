@@ -58,8 +58,8 @@ $(DEPLOY)/%: web/%
 
 naclforth_web: $(NACLFORTH32) \
                $(NACLFORTH64) \
-               $(DEPLOY_STATIC)/nacl4th.ico \
-               $(DEPLOY_STATIC)/nacl4th.png \
+               $(DEPLOY_STATIC)/naclforth.ico \
+               $(DEPLOY_STATIC)/naclforth.png \
                $(DEPLOY_STATIC)/naclforth.nmf \
                $(DEPLOY)/naclforth.py \
                $(DEPLOY)/app.yaml \

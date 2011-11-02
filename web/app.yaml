@@ -8,12 +8,12 @@ default_expiration: "1h"
 handlers:
 
 - url: /favicon.ico
-  static_files: static/nacl4th.ico
-  upload: static/nacl4th.ico
+  static_files: static/naclforth.ico
+  upload: static/naclforth.ico
 
 - url: /favicon.png
-  static_files: static/nacl4th.png
-  upload: static/nacl4th.png
+  static_files: static/naclforth.png
+  upload: static/naclforth.png
 
 - url: /naclforth.nmf
   static_files: static/naclforth.nmf
