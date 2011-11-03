@@ -239,6 +239,24 @@ static void PrintNumber(cell_t value) {
   Print(out, out_len);
 }
 
+static void PrintWords(void) {
+  DICTIONARY *pos;
+
+  pos = dictionary_head;
+  while (pos && pos->name) {
+    if (!(pos->flags & FLAG_SMUDGE)) {
+      PrintCstr(pos->name);
+      PrintCstr(" ");
+    }
+    // Follow links differently based on flags.
+    if (pos->flags & FLAG_LINKED) {
+      pos = pos->next;
+    } else {
+      ++pos;
+    }
+  }
+}
+
 static void Run(void) {
   register cell_t* sp = sp_global;
   register cell_t* rp = rp_global;
@@ -298,7 +316,7 @@ static void Run(void) {
     WORD(base) WORD(decimal) WORD(hex)
     WORD(fill) WORD(move) WORD(cmove) SWORD("cmove>", cmove2)
     SWORD("source-id", source_id)
-    SWORD("dictionary-head", dictionary_head)
+    SWORD("dictionary-head", dictionary_head) WORD(words)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(yield)
 #ifdef __native_client__
@@ -570,6 +588,7 @@ static void Run(void) {
 
  _source_id: *++sp = source_id; NEXT;
  _dictionary_head: *++sp = (cell_t)&dictionary_head; NEXT;
+ _words: PrintWords(); NEXT;
 
  _lparen: source_in = Parse(')') + 1; NEXT;
  _backslash: source_in = Parse('\n') + 1; NEXT;
