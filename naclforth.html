@@ -167,6 +167,25 @@
             reading_line = true;
             processKeys();
           } else if (prefix == 'h') {
+            var parts = rest.split('|');
+            var method = parts[0];
+            var url = parts[1];
+            parts = parts.slice(2);
+            var values = {};
+            while (parts.length) {
+              if (parts[0].substr(0, 1) == '_') {
+                values[parts[0].substr(1)] = parts.slice(1).join('|');
+                parts = [];
+              } else {
+                values[parts[0]] = parts[1];
+                parts = parts.slice(2);
+              }
+            }
+            httpRequest(url, method, values, function(status, text) {
+              forth.postMessage(
+                  String.fromCharCode(Math.floor(status / 100) % 100) +
+                  String.fromCharCode(status % 100) + text);
+            });
           } else {
             alert('Unknown message prefix "' + prefix + '"');
           }
@@ -182,14 +201,14 @@
         function moduleDidLoad() {
           var boot = '{{ boot }}';
           if (boot == '') {
-            start('');
+            start('{{ user_id }}');
           } else {
-            httpRequest('{{ boot }}', 'GET', {}, function(status, text) {
+            httpRequest(boot, 'GET', {}, function(status, text) {
               if (status == 200) {
-                start(text);
+                start('{{ user_id }} ' + text);
               } else {
                 alert('Unable to load boot code!');
-                start('');
+                start('{{ user_id }}');
                 return;
               }
             });

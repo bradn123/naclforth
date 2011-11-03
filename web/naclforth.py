@@ -27,11 +27,11 @@ class UserInfo(db.Model):
 class File(db.Model):
   owner = db.IntegerProperty()
   filename = db.StringProperty()
-  data = db.BlobProperty()
+  data = db.TextProperty()
 
 
 def AllocId():
-  key = db.Key.from_path('UserCounter', 1)
+  key = db.Key.from_path('UserCounter', 'single')
   obj = UserCounter.get(key)
   if not obj:
     obj = UserCounter(key=key)
@@ -64,8 +64,6 @@ def GetUserInfo():
     uinfo = UserInfo()
     uinfo.who = who
     uinfo.id = id
-    uinfo.section_quota = DEFAULT_SECTION_QUOTA
-    uinfo.index_quota = DEFAULT_INDEX_QUOTA
     uinfo.put()
 
   info = {
@@ -135,18 +133,21 @@ class WriteHandler(webapp.RequestHandler):
       self.response.set_status(403)  # forbidden
       logging.debug('not logged in')
       return
+    owner = uinfo['id']
+    
+    logging.debug('trying to write %d to %d:%s' % (len(data), owner, filename))
 
     key = 'file_%d_%s' % (owner, filename)
 
-    f = File(key=key)
-    f.owner = uinfo['id']
+    f = File(key=db.Key.from_path('File', key))
+    f.owner = owner
     f.filname = filename
     f.data = data
     f.put()
       
     memcache.set(key, data)
                   
-    logging.debug('wrote %d to %d:%s' % (en(data), owner, name))
+    logging.debug('wrote %d to %d:%s' % (len(data), owner, filename))
 
 
 class MainPageHandler(webapp.RequestHandler):

@@ -607,7 +607,10 @@ static void Run(void) {
   
 #ifdef __native_client__  
  _post: len = *sp--; PostMessage((const char*)*sp--, len); NEXT;
- _inbound: *++sp = (cell_t)inbound_message; *++sp = inbound_message_length; NEXT;
+ _inbound: {
+    *++sp = (cell_t)inbound_message; *++sp = inbound_message_length;
+    inbound_message = 0; inbound_message_length = 0; NEXT;
+  }
 #endif
 }
 
