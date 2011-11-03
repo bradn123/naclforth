@@ -19,19 +19,16 @@ handlers:
   static_files: static/naclforth.nmf
   upload: static/naclforth.nmf
   mime_type: application/octet-stream
-  expiration: "5s"
 
 - url: /naclforth_x86-32.nexe
   static_files: static/naclforth_x86-32.nexe
   upload: static/naclforth_x86-32.nexe
   mime_type: application/octet-stream
-  expiration: "5s"
 
 - url: /naclforth_x86-64.nexe
   static_files: static/naclforth_x86-64.nexe
   upload: static/naclforth_x86-64.nexe
   mime_type: application/octet-stream
-  expiration: "5s"
 
 - url: /.*
   script: naclforth.py
