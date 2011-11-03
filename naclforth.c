@@ -270,6 +270,8 @@ static void Run(void) {
 #define WORD_IMP_DOES (&base_dictionary[8])
     WORD(quit) // 9
 #define WORD_QUIT (&base_dictionary[9])
+    WORD(type) // 10
+#define WORD_TYPE (&base_dictionary[10])
 
     SWORD(">r", push) SWORD("r>", pop)
     SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
@@ -280,7 +282,7 @@ static void Run(void) {
     SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
     SWORD(",", comma) WORD(here)
-    SWORD(".", dot) WORD(type) WORD(emit) WORD(cr) WORD(page)
+    SWORD(".", dot) WORD(emit) WORD(cr) WORD(page)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
     WORD(create) SIWORD("does>", does) WORD(variable) WORD(constant)
@@ -295,7 +297,7 @@ static void Run(void) {
     WORD(base) WORD(decimal) WORD(hex)
     WORD(fill) WORD(move) WORD(cmove) SWORD("cmove>", cmove2)
     SWORD("source-id", source_id)
-    SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
+    SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(yield)
 #ifdef __native_client__
     WORD(post) WORD(inbound)
@@ -304,7 +306,7 @@ static void Run(void) {
     END_OF_DICTIONARY  // This must go last.
   };
 
-  DICTIONARY *quit_loop[] = {WORD_QUIT};
+  static DICTIONARY *quit_loop[] = {WORD_QUIT};
 
   // Start dictionary out with these.
   if (!dictionary_head) { dictionary_head = base_dictionary; }
@@ -561,6 +563,7 @@ static void Run(void) {
  _source_id: *++sp = source_id; NEXT;
 
  _lparen: source_in = Parse(')') + 1; NEXT;
+ _backslash: source_in = Parse('\n') + 1; NEXT;
  _squote: {
     if (compile_mode) {
       len = Parse('"');
@@ -578,11 +581,29 @@ static void Run(void) {
     }
     NEXT;
   }
- _backslash: source_in = Parse('\n') + 1; NEXT;
+ _dotquote: {
+    if (compile_mode) {
+      len = Parse('"');
+      *++sp = (cell_t)malloc(len - source_in);
+      assert(*sp);
+      memcpy((char*)*sp, &source[source_in], len - source_in);
+      COMMA(WORD_LIT); COMMA(*sp--);
+      COMMA(WORD_LIT); COMMA(len - source_in);
+      COMMA(WORD_TYPE);
+      source_in = len + 1;
+    } else {
+      *++sp = (cell_t)&source[source_in];
+      len = Parse('"');
+      Print((char*)*sp, len - source_in);
+      --sp;
+      source_in = len + 1;
+    }
+    NEXT;
+  }
 
  _bye: exit(0); goto _bye;
   
- _yield: sp_global = sp; rp_global = rp; return;
+ _yield: *++rp = (cell_t)ip; sp_global = sp; rp_global = rp; return;
   
 #ifdef __native_client__  
  _post: len = *sp--; PostMessage((const char*)*sp--, len); NEXT;
@@ -647,9 +668,6 @@ static void Messaging_HandleMessage(
 
   inbound_message = (char*)ppb_var_interface->VarToUtf8(var_message, &len);
   inbound_message_length = len;
-  fprintf(stderr, "\nGot:\n");
-  fwrite(inbound_message, 1, inbound_message_length, stderr);
-  fprintf(stderr, "\n\n");
   
   Run();
 }

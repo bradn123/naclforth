@@ -76,6 +76,15 @@
           };
         }
 
+        function htmlEscape(str) {
+          return str.replace(
+              /&/g, '&amp;').replace(
+              />/g, '&gt;').replace(
+              /</g, '&lt;').replace(
+              /"/g, '&quot;').replace(
+              /\n/g, '<br>\n'); 
+        }
+
         function processKeys() {
           if (!reading_line) return;
           for (var i = 0; i < event_buffer.length; i++) {
@@ -89,7 +98,7 @@
               reading_line = false;
               var line = accept_buffer;
               accept_buffer = '';
-              out_buffer += (line + '<br>\n');
+              out_buffer += (htmlEscape(line) + '<br>\n');
               event_buffer = event_buffer.substr(i + 1);
               refreshOut();
               forth.postMessage(line);
@@ -104,7 +113,7 @@
   
         function refreshOut() {
           var out = document.getElementById('out');
-          out.innerHTML = out_buffer + accept_buffer + cursor_text;
+          out.innerHTML = out_buffer + htmlEscape(accept_buffer) + cursor_text;
           window.scrollTo(0, document.body.scrollHeight);
         }
 
@@ -145,17 +154,10 @@
             out_buffer = '';
             refreshOut();
           } else if (prefix == 'o') {
-            var out = ''
-            for (var i = 0; i < rest.length; i++) {
-              var ch = rest.substr(i, 1);
-              if (ch == '\n') {
-                out += '<br>\n';
-              } else if (ch == '\r') {
-              } else {
-                out += ch;
-              }
-            }
-            out_buffer += out;
+            out_buffer += htmlEscape(rest);
+            refreshOut();
+          } else if (prefix == 'O') {
+            out_buffer += rest;
             refreshOut();
           } else if (prefix == 'i') {
             var tmp = event_buffer;
