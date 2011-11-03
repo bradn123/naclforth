@@ -1,5 +1,5 @@
 {
-  "name": "NativeClient Forth"
+  "name": "NativeClient Forth",
   "description": "Forth programming language in NativeClient sandbox",
   "version": "0.0.0.1",
   "app": {

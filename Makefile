@@ -24,6 +24,7 @@ LFLAGS_X86_64=${LFLAGS}
 OUT=out
 DEPLOY=$(OUT)/deploy_appengine
 DEPLOY_STATIC=$(DEPLOY)/static
+OUT_HOSTED=$(OUT)/deploy_hosted
 OBJ=$(OUT)/obj
 
 
@@ -31,7 +32,7 @@ NACLFORTH32=$(DEPLOY_STATIC)/naclforth_x86-32.nexe
 NACLFORTH64=$(DEPLOY_STATIC)/naclforth_x86-64.nexe
 
 
-all: naclforth_web $(OUT)/naclforth
+all: naclforth_web naclforth_hosted $(OUT)/naclforth
 
 
 $(OUT)/naclforth: naclforth.c
@@ -72,8 +73,14 @@ $(DEPLOY)/naclforth.html: naclforth.html
 $(DEPLOY_STATIC)/naclforth.nmf: naclforth.nmf
 	cp $< $@
 
-$(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC):
+$(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC) $(OUT_HOSTED):
 	mkdir -p $@
+
+naclforth_hosted: $(OUT_HOSTED)/naclforth.zip
+
+$(OUT_HOSTED)/naclforth.zip: $(OUT_HOSTED)
+	-rm -f hosted_app/*~
+	zip -r $@ hosted_app
 
 deploy: naclforth_web
 	appcfg.py update $(DEPLOY)
