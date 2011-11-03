@@ -80,6 +80,7 @@ naclforth_hosted: $(OUT_HOSTED)/naclforth.zip
 
 $(OUT_HOSTED)/naclforth.zip: $(OUT_HOSTED)
 	-rm -f hosted_app/*~
+        -rm -f $@
 	zip -r $@ hosted_app
 
 deploy: naclforth_web
