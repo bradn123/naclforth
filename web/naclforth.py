@@ -31,7 +31,7 @@ class File(db.Model):
 
 
 def AllocId():
-  key = db.Key.from_path('UserCounter', 'single')
+  key = db.Key.from_path('UserCounter', 1)
   obj = UserCounter.get(key)
   if not obj:
     obj = UserCounter(key=key)
