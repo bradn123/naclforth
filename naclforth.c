@@ -281,7 +281,8 @@ static void Run(void) {
     WORD(min) WORD(max)
     SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
-    SWORD(",", comma) WORD(here)
+    SWORD(",", comma) WORD(here) WORD(allot) WORD(align)
+    WORD(allocate) WORD(free) WORD(resize)
     SWORD(".", dot) WORD(emit) WORD(cr) WORD(page)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
@@ -297,6 +298,7 @@ static void Run(void) {
     WORD(base) WORD(decimal) WORD(hex)
     WORD(fill) WORD(move) WORD(cmove) SWORD("cmove>", cmove2)
     SWORD("source-id", source_id)
+    SWORD("dictionary-head", dictionary_head)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(yield)
 #ifdef __native_client__
@@ -347,6 +349,12 @@ static void Run(void) {
 
  _comma: COMMA(*sp--); NEXT;
  _here: *++sp = (cell_t)here; NEXT;
+ _allot: here = (cell_t*)(*sp-- + (char*)here); NEXT;
+ _align: Align(); NEXT;
+ _allocate: *sp = (cell_t)malloc(*sp); ++sp; sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
+ _free: free((void*)*sp--); *++sp = 0; NEXT;
+ _resize: len = *sp--; *sp = (cell_t)realloc((void*)*sp, len);
+          sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
 
  _dot: PrintNumber(*sp--); NEXT;
  _type: len = *sp--; Print((char*)*sp--, len); NEXT;
@@ -561,6 +569,7 @@ static void Run(void) {
  _cmove2: goto _move;
 
  _source_id: *++sp = source_id; NEXT;
+ _dictionary_head: *++sp = (cell_t)&dictionary_head; NEXT;
 
  _lparen: source_in = Parse(')') + 1; NEXT;
  _backslash: source_in = Parse('\n') + 1; NEXT;
