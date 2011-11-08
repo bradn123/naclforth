@@ -74,6 +74,12 @@
             if (evt.keyCode == 8) return false;
             return true;
           };
+          document.onpaste = function(evt) {
+            var data = evt.clipboardData.getData('text/plain');
+            event_buffer += data;
+            processKeys();
+            return true;
+          };
         }
 
         function htmlEscape(str) {
