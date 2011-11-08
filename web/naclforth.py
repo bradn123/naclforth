@@ -152,6 +152,13 @@ class WriteHandler(webapp.RequestHandler):
 
 class MainPageHandler(webapp.RequestHandler):
   def get(self):
+    # Check that were running in Chrome of a high enough version.
+    agent = self.request.headers.get('User-Agent', '')
+    m = re.match('.*Chrom[^/]+\/([0-9]+)\..*', agent)
+    if not m or int(m.group(1)) < 14:
+      self.redirect('/getchrome')
+      return
+    
     boot = self.request.get('boot', '/_read?owner=0&filename=%2fpublic%2f_boot')
     uinfo = GetUserInfo()
     fields = {
@@ -166,12 +173,31 @@ class MainPageHandler(webapp.RequestHandler):
     else:
       fields['signed_in'] = False
       fields['sign_in'] = users.create_login_url(self.request.uri)
-    path = os.path.join(os.path.dirname(__file__), 'naclforth.html')
+    path = os.path.join(os.path.dirname(os.path.abspath(
+          __file__)), 'templates', 'naclforth.html')
+    self.response.out.write(template.render(path, fields))
+
+
+class GetChromePageHandler(webapp.RequestHandler):
+  def get(self):
+    fields = {}
+    path = os.path.join(os.path.dirname(os.path.abspath(
+          __file__)), 'templates', 'getchrome.html')
+    self.response.out.write(template.render(path, fields))
+
+
+class GetAppPageHandler(webapp.RequestHandler):
+  def get(self):
+    fields = {}
+    path = os.path.join(os.path.dirname(os.path.abspath(
+          __file__)), 'templates', 'getapp.html')
     self.response.out.write(template.render(path, fields))
 
 
 application = webapp.WSGIApplication([
     ('/', MainPageHandler),
+    ('/getchrome', GetChromePageHandler),
+    ('/getapp', GetAppPageHandler),
     ('/_read', ReadHandler),
     ('/_write', WriteHandler),
 ], debug=True)

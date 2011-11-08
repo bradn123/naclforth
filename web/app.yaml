@@ -7,27 +7,13 @@ default_expiration: "5s"
 
 handlers:
 
-- url: /favicon.ico
-  static_files: static/naclforth.ico
-  upload: static/naclforth.ico
+- url: /(.*\.(ico|png))
+  static_files: static/\1
+  upload: static/(.*\.(ico|png))
 
-- url: /favicon.png
-  static_files: static/naclforth.png
-  upload: static/naclforth.png
-
-- url: /naclforth.nmf
-  static_files: static/naclforth.nmf
-  upload: static/naclforth.nmf
-  mime_type: application/octet-stream
-
-- url: /naclforth_x86-32.nexe
-  static_files: static/naclforth_x86-32.nexe
-  upload: static/naclforth_x86-32.nexe
-  mime_type: application/octet-stream
-
-- url: /naclforth_x86-64.nexe
-  static_files: static/naclforth_x86-64.nexe
-  upload: static/naclforth_x86-64.nexe
+- url: /(.*\.(nmf|nexe))
+  static_files: static/\1
+  upload: static/(.*\.(nmf|nexe))
   mime_type: application/octet-stream
 
 - url: /.*

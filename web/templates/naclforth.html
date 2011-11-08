@@ -223,7 +223,9 @@
               if (status == 200) {
                 start('{{ user_id }} ' + text);
               } else {
-                alert('Unable to load boot code!');
+                out_buffer += 'ERROR - Unable to load boot code, ';
+                out_buffer += 'falling back to built-ins!<br>\n';
+                refreshOut();
                 start('{{ user_id }}');
                 return;
               }
@@ -231,8 +233,13 @@
           }
         }
 
-        document.getElementById('listener').addEventListener(
-            'load', moduleDidLoad, true);
+        if (window.chrome.app.isInstalled ||
+            window.location.hostname == 'localhost') {
+          document.getElementById('listener').addEventListener(
+              'load', moduleDidLoad, true);
+        } else {
+          window.location = '/getapp';
+        }
       </script>
       <embed type="application/x-nacl" id="forth"
              width="0" height="0" src="naclforth.nmf"/>

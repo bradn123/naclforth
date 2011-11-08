@@ -24,6 +24,7 @@ LFLAGS_X86_64=${LFLAGS}
 OUT=out
 DEPLOY=$(OUT)/deploy_appengine
 DEPLOY_STATIC=$(DEPLOY)/static
+DEPLOY_TEMPLATES=$(DEPLOY)/templates
 OUT_HOSTED=$(OUT)/deploy_hosted
 OBJ=$(OUT)/obj
 
@@ -59,18 +60,17 @@ $(DEPLOY)/%: web/%
 
 naclforth_web: $(NACLFORTH32) \
                $(NACLFORTH64) \
-               $(DEPLOY_STATIC)/naclforth.ico \
-               $(DEPLOY_STATIC)/naclforth.png \
+               $(DEPLOY_STATIC)/favicon.ico \
+               $(DEPLOY_STATIC)/favicon.png \
                $(DEPLOY_STATIC)/naclforth.nmf \
                $(DEPLOY)/naclforth.py \
                $(DEPLOY)/app.yaml \
                $(DEPLOY)/index.yaml \
-               $(DEPLOY)/naclforth.html
+               $(DEPLOY_TEMPLATES)/getchrome.html \
+               $(DEPLOY_TEMPLATES)/getapp.html \
+               $(DEPLOY_TEMPLATES)/naclforth.html
 
-$(DEPLOY)/naclforth.html: naclforth.html
-	cp $< $@
-
-$(DEPLOY_STATIC)/naclforth.nmf: naclforth.nmf
+$(DEPLOY_TEMPLATES)/%.html: web/templates/%.html
 	cp $< $@
 
 $(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC) $(OUT_HOSTED):
