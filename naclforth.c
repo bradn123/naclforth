@@ -30,6 +30,7 @@ static PP_Instance pp_instance = 0;
 #define STACK_SIZE (1024 * 1024)
 #define RSTACK_SIZE (1024 * 1024)
 #define HEAP_SIZE (10 * 1024 * 1024)
+#define INPUT_SIZE 1024
 
 
 typedef long cell_t;
@@ -58,6 +59,9 @@ static cell_t compile_mode = 0;
 static cell_t number_base = 10;
 
 // Input source
+#ifdef __native_client__
+static char *input_buffer = 0;
+#endif
 static char *source = 0;
 static cell_t source_length = 0;
 static cell_t source_id = 0;
@@ -530,7 +534,9 @@ static void Run(void) {
     source_length = 0;
 #ifdef __native_client__
     if (inbound_message) {
-      source = inbound_message;
+      input_buffer = realloc(input_buffer, inbound_message_length + 1);
+      memcpy(input_buffer, inbound_message, inbound_message_length);
+      source = input_buffer;
       source_length = inbound_message_length;
       inbound_message = 0;
       inbound_message_length = 0;
