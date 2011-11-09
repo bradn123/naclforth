@@ -88,14 +88,15 @@ static void PostMessage(const char *data, cell_t len) {
   ppb_var_interface->Release(msg);
 }
 
-static void Print(const char *data, cell_t len) {
+static void Print(const char *data, cell_t len, int leading_spaces) {
   char *tmp;
 
-  tmp = malloc(len + 1);
+  tmp = malloc(1 + leading_spaces + len);
   assert(tmp);
   tmp[0] = 'o';
-  memcpy(tmp + 1, data, len);
-  PostMessage(tmp, len + 1);
+  memset(tmp + 1, ' ', leading_spaces);
+  memcpy(tmp + 1 + leading_spaces, data, len);
+  PostMessage(tmp, 1 + leading_spaces + len);
   free(tmp);
 }
 
@@ -105,7 +106,11 @@ static void ReadLine(void) {
 
 #else
 
-static void Print(const char *data, cell_t len) {
+static void Print(const char *data, cell_t len, int leading_spaces) {
+  while (leading_spaces > 0) {
+    fputc(' ', stdout);
+    --leading_spaces;
+  }
   fwrite(data, 1, len, stdout);
   fflush(stdout);
 }
@@ -125,7 +130,11 @@ static void ReadLine(void) {
 
 
 static void PrintCstr(const char *str) {
-  Print(str, strlen(str));
+  Print(str, strlen(str), 0);
+}
+
+static void PrintCstrLeading(const char *str, int leading_spaces) {
+  Print(str, strlen(str), leading_spaces);
 }
 
 
@@ -227,7 +236,6 @@ static void PrintNumber(cell_t value) {
   static char out[20];
   int out_len = 0;
   
-  out[out_len++] = ' ';
   if (value < 0) { value = -value; out[out_len++] = '-'; }
   do {
     buf[len++] = digit[value % number_base];
@@ -236,7 +244,7 @@ static void PrintNumber(cell_t value) {
   while (len) {
     out[out_len++] = buf[--len];
   }
-  Print(out, out_len);
+  Print(out, out_len, 1);
 }
 
 static void PrintWords(void) {
@@ -245,8 +253,7 @@ static void PrintWords(void) {
   pos = dictionary_head;
   while (pos && pos->name) {
     if (!(pos->flags & FLAG_SMUDGE)) {
-      PrintCstr(pos->name);
-      PrintCstr(" ");
+      PrintCstrLeading(pos->name, 1);
     }
     // Follow links differently based on flags.
     if (pos->flags & FLAG_LINKED) {
@@ -315,6 +322,8 @@ static void Run(void) {
     WORD(literal) SWORD("compile,", compile) WORD(find)
     WORD(base) WORD(decimal) WORD(hex)
     WORD(fill) WORD(move) WORD(cmove) SWORD("cmove>", cmove2)
+    WORD(source) SWORD("source-length", source_length)
+    SWORD("source-in", source_in)
     SWORD("source-id", source_id)
     SWORD("dictionary-head", dictionary_head) WORD(words)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
@@ -375,8 +384,8 @@ static void Run(void) {
           sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
 
  _dot: PrintNumber(*sp--); NEXT;
- _type: len = *sp--; Print((char*)*sp--, len); NEXT;
- _emit: ch = (char)*sp--; Print(&ch, 1); NEXT;
+ _type: len = *sp--; Print((char*)*sp--, len, 0); NEXT;
+ _emit: ch = (char)*sp--; Print(&ch, 1, 0); NEXT;
  _cr: PrintCstr("\n"); NEXT;
  _page:
 #ifdef __native_client__
@@ -565,8 +574,8 @@ static void Run(void) {
         *++sp = found;
       }
     } else {
-      PrintCstr("Unknown word: ");
-      Print(&source[start], source_in - start - 1);
+      PrintCstr("!!! Unknown word: ");
+      Print(&source[start], source_in - start - 1, 0);
       PrintCstr("\n");
       source_in = source_length;
       compile_mode = 0;
@@ -587,7 +596,11 @@ static void Run(void) {
  _cmove: goto _move;
  _cmove2: goto _move;
 
- _source_id: *++sp = source_id; NEXT;
+ _source: *++sp = (cell_t)&source; NEXT;
+ _source_length: *++sp = (cell_t)&source_length; NEXT;
+ _source_in: *++sp = (cell_t)&source_in; NEXT;
+ _source_id: *++sp = (cell_t)&source_id; NEXT;
+  
  _dictionary_head: *++sp = (cell_t)&dictionary_head; NEXT;
  _words: PrintWords(); NEXT;
 
@@ -623,7 +636,7 @@ static void Run(void) {
     } else {
       *++sp = (cell_t)&source[source_in];
       len = Parse('"');
-      Print((char*)*sp, len - source_in);
+      Print((char*)*sp, len - source_in, 0);
       --sp;
       source_in = len + 1;
     }
