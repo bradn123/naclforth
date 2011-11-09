@@ -179,6 +179,12 @@
             case 'O': appendOut(rest); break;
             // getevent
             case 'i':
+              var tmp = event_buffer.substr(0, 1);
+              event_buffer = event_buffer.substr(1);
+              forth.postMessage(tmp);
+              break;
+            // getevents
+            case 'I':
               var tmp = event_buffer;
               event_buffer = '';
               forth.postMessage(tmp);
