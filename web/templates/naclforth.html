@@ -48,8 +48,6 @@
     <div id="listener">
       <script type="text/javascript">
         var forth;
-        var cursor_text = '<span class="cursor">&emsp;</span>';
-        var out_buffer = '';
         var accept_buffer = '';
         var reading_line = false;
         var event_buffer = '';
@@ -110,9 +108,9 @@
               reading_line = false;
               var line = accept_buffer;
               accept_buffer = '';
-              out_buffer += (htmlEscape(line) + '<br>\n');
+              appendOut(htmlEscape(line) + '<br>\n');
               event_buffer = event_buffer.substr(i + 1);
-              refreshOut();
+              refreshPrompt();
               forth.postMessage(line);
               return;
             } else if (code >= 32 && code <= 126) {
@@ -120,17 +118,20 @@
             }
           }
           event_buffer = '';
-          refreshOut();
+          refreshPrompt();
+        }
+
+        function appendOut(text) {
+          var span = document.createElement('span');
+          span.innerHTML = text;
+          var out = document.getElementById('out');
+          out.appendChild(span); 
         }
   
-        function refreshOut() {
-          var out = document.getElementById('out');
-          var value = out_buffer + htmlEscape(accept_buffer) + cursor_text;
-          if (last_output != value) {
-            last_output = value;
-            out.innerHTML = value;
-            window.scrollTo(0, document.body.scrollHeight);
-          }
+        function refreshPrompt() {
+          var prompt = document.getElementById('prompt');
+          prompt.innerHTML = htmlEscape(accept_buffer);
+          window.scrollTo(0, document.body.scrollHeight);
         }
 
         function httpRequest(url, method, values, callback) {
@@ -167,13 +168,15 @@
             // javascript
             case 'j': eval(rest); break;
             // setcursor
-            case 'c': cursor_text = rest; refreshOut(); break;
+            case 'c':
+              document.getElementById('cursor').innerHTML = rest;
+              break;
             // page
-            case 'p': out_buffer = ''; refreshOut(); break;
+            case 'p': document.getElementById('out').innerHTML = rest; break;
             // type
-            case 'o': out_buffer += htmlEscape(rest); refreshOut(); break;
+            case 'o': appendOut(htmlEscape(rest)); break;
             // rawtype
-            case 'O': out_buffer += rest; refreshOut(); break;
+            case 'O': appendOut(rest); break;
             // getevent
             case 'i':
               var tmp = event_buffer;
@@ -226,9 +229,8 @@
               if (status == 200) {
                 start('{{ user_id }} ' + text);
               } else {
-                out_buffer += 'ERROR - Unable to load boot code, ';
-                out_buffer += 'falling back to built-ins!<br>\n';
-                refreshOut();
+                appendOut('ERROR - Unable to load boot code, ');
+                appendOut('falling back to built-ins!<br>\n');
                 start('{{ user_id }}');
                 return;
               }
@@ -248,6 +250,6 @@
              width="0" height="0" src="naclforth.nmf"/>
     </div>
 
-    <div id="out" class="console"></div>
+    <div id="outdiv" class="console"><span id="out">Loading... </span><span id="prompt"></span><span id="cursor" class="cursor">&emsp;</span></div>
   </div></body>
 </html>
