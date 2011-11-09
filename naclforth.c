@@ -318,7 +318,7 @@ static void Run(void) {
     SWORD("source-id", source_id)
     SWORD("dictionary-head", dictionary_head) WORD(words)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
-    WORD(bye) WORD(yield)
+    WORD(bye) WORD(rawyield)
 #ifdef __native_client__
     WORD(post) WORD(inbound)
 #endif
@@ -529,7 +529,7 @@ static void Run(void) {
       Ok();
       ReadLine();
       --ip;
-      goto _yield;
+      goto _rawyield;
     }
 #else
     Ok();
@@ -569,6 +569,7 @@ static void Run(void) {
       Print(&source[start], source_in - start - 1);
       PrintCstr("\n");
       source_in = source_length;
+      compile_mode = 0;
     }
   }
   --ip;
@@ -631,7 +632,7 @@ static void Run(void) {
 
  _bye: exit(0); goto _bye;
   
- _yield: *++rp = (cell_t)ip; sp_global = sp; rp_global = rp; return;
+ _rawyield: *++rp = (cell_t)ip; sp_global = sp; rp_global = rp; return;
   
 #ifdef __native_client__  
  _post: len = *sp--; PostMessage((const char*)*sp--, len); NEXT;

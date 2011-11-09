@@ -159,51 +159,54 @@
         function handleMessage(msg) {
           var prefix = msg.data.substr(0, 1);
           var rest = msg.data.substr(1);
-          if (prefix == 'a') {
-            alert(rest);
-          } else if (prefix == 'j') {
-            eval(rest);
-          } else if (prefix == 'c') {
-            cursor_text = rest;
-            refreshOut();
-          } else if (prefix == 'p') {
-            out_buffer = '';
-            refreshOut();
-          } else if (prefix == 'o') {
-            out_buffer += htmlEscape(rest);
-            refreshOut();
-          } else if (prefix == 'O') {
-            out_buffer += rest;
-            refreshOut();
-          } else if (prefix == 'i') {
-            var tmp = event_buffer;
-            event_buffer = '';
-            forth.postMessage(tmp);
-          } else if (prefix == 'r') {
-            reading_line = true;
-            processKeys();
-          } else if (prefix == 'h') {
-            var parts = rest.split('|');
-            var method = parts[0];
-            var url = parts[1];
-            parts = parts.slice(2);
-            var values = {};
-            while (parts.length) {
-              if (parts[0].substr(0, 1) == '_') {
-                values[parts[0].substr(1)] = parts.slice(1).join('|');
-                parts = [];
-              } else {
-                values[parts[0]] = parts[1];
-                parts = parts.slice(2);
+          switch (prefix) {
+            // sync
+            case 's': forth.postMessage(''); break;
+            // alert
+            case 'a': alert(rest); break;
+            // javascript
+            case 'j': eval(rest); break;
+            // setcursor
+            case 'c': cursor_text = rest; refreshOut(); break;
+            // page
+            case 'p': out_buffer = ''; refreshOut(); break;
+            // type
+            case 'o': out_buffer += htmlEscape(rest); refreshOut(); break;
+            // rawtype
+            case 'O': out_buffer += rest; refreshOut(); break;
+            // getevent
+            case 'i':
+              var tmp = event_buffer;
+              event_buffer = '';
+              forth.postMessage(tmp);
+              break;
+            // readline
+            case 'r': reading_line = true; processKeys(); break;
+            // http
+            case 'h':
+              var parts = rest.split('|');
+              var method = parts[0];
+              var url = parts[1];
+              parts = parts.slice(2);
+              var values = {};
+              while (parts.length) {
+                if (parts[0].substr(0, 1) == '_') {
+                  values[parts[0].substr(1)] = parts.slice(1).join('|');
+                  parts = [];
+                } else {
+                  values[parts[0]] = parts[1];
+                  parts = parts.slice(2);
+                }
               }
-            }
-            httpRequest(url, method, values, function(status, text) {
-              forth.postMessage(
-                  String.fromCharCode(Math.floor(status / 100) % 100) +
-                  String.fromCharCode(status % 100) + text);
-            });
-          } else {
-            alert('Unknown message prefix "' + prefix + '"');
+              httpRequest(url, method, values, function(status, text) {
+                forth.postMessage(
+                    String.fromCharCode(Math.floor(status / 100) % 100) +
+                    String.fromCharCode(status % 100) + text);
+              });
+              break;
+            default:
+              alert('Unknown message prefix "' + prefix + '"');
+              break;
           }
         }
 
