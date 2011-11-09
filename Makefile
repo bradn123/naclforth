@@ -7,18 +7,15 @@ STRIP32=${NACL_SDK_BIN_DIR}/i686-nacl-strip
 STRIP64=${NACL_SDK_BIN_DIR}/x86_64-nacl-strip
 
 
-RODATA_START=0x8000000
-
-
-CFLAGS=-O2 -Wall -Werror -DRODATA_START=${RODATA_START}
-#LFLAGS=${CFLAGS} -Wl,--section-start,.rodata=${RODATA_START}
+CFLAGS=-O2 -Wall -Werror
+LDFLAGS=$(CFLAGS)
 LIBS=-lppapi -lnacl_dyncode -lpthread
 
 
-CFLAGS_X86_32=-DARCH_X86_32 ${CFLAGS}
-CFLAGS_X86_64=-DARCH_X86_64 ${CFLAGS}
-LFLAGS_X86_32=${LFLAGS}
-LFLAGS_X86_64=${LFLAGS}
+CFLAGS_X86_32=-DARCH_X86_32 $(CFLAGS)
+CFLAGS_X86_64=-DARCH_X86_64 $(CFLAGS)
+LDFLAGS_X86_32=$(LDFLAGS)
+LDFLAGS_X86_64=$(LDFLAGS)
 
 
 OUT=out
@@ -41,11 +38,11 @@ $(OUT)/naclforth: naclforth.c
 
 
 $(NACLFORTH32): $(OBJ)/naclforth_x86-32.o | $(DEPLOY_STATIC)
-	${CC32} -o $@ $< ${LFLAGS_X86_32} ${LIBS}
+	${CC32} -o $@ $< ${LDFLAGS_X86_32} ${LIBS}
 	${STRIP32} $@
 
 $(NACLFORTH64): $(OBJ)/naclforth_x86-64.o | $(DEPLOY_STATIC)
-	${CC64} -o $@ $< ${LFLAGS_X86_64} ${LIBS}
+	${CC64} -o $@ $< ${LDFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@
 
 $(OBJ)/naclforth_x86-32.o: naclforth.c $(OBJ)
