@@ -214,7 +214,6 @@
         }
 
         function start(text) {
-          startEvents();
           forth = document.getElementById('forth');
           forth.addEventListener('message', handleMessage);
           forth.postMessage(text);
@@ -238,10 +237,15 @@
           }
         }
 
-        if (window.chrome.app.isInstalled ||
-            window.location.hostname == 'localhost') {
+        function init() {
+          startEvents();
           document.getElementById('listener').addEventListener(
               'load', moduleDidLoad, true);
+        }
+        
+        if (window.chrome.app.isInstalled ||
+            window.location.hostname == 'localhost') {
+          init();
         } else {
           window.location = '/getapp';
         }
