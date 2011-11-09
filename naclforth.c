@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <time.h>
 
 #ifdef __native_client__
 #include <sys/nacl_syscalls.h>
@@ -35,6 +36,8 @@ static PP_Instance pp_instance = 0;
 
 typedef long cell_t;
 typedef unsigned long ucell_t;
+typedef long long dcell_t;
+typedef unsigned long long udcell_t;
 
 typedef struct _DICTIONARY {
   void* code;
@@ -268,6 +271,20 @@ static void PrintWords(void) {
   }
 }
 
+static cell_t *DateTime(cell_t *sp) {
+  time_t rawtime;
+  struct tm t;
+  time(&rawtime);
+  localtime_r(&rawtime, &t);
+  *++sp = t.tm_sec;
+  *++sp = t.tm_min;
+  *++sp = t.tm_hour;
+  *++sp = t.tm_mday;
+  *++sp = t.tm_mon;
+  *++sp = t.tm_year;
+  return sp;
+}
+
 static void Run(void) {
   register cell_t* sp = sp_global;
   register cell_t* rp = rp_global;
@@ -276,6 +293,7 @@ static void Run(void) {
   char ch;
   cell_t len;
   cell_t *x;
+  dcell_t dtmp;
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -304,9 +322,16 @@ static void Run(void) {
 
     SWORD(">r", push) SWORD("r>", pop)
     SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
+    SWORD("*/", muldiv) SWORD("*/mod", muldivmod) SWORD("/mod", divmod)
+    WORD(and) WORD(or) WORD(xor) WORD(invert) WORD(negate)
     SWORD("=", equal) SWORD("<>", nequal)
     SWORD("<", less) SWORD("<=", lequal)
     SWORD(">", greater) SWORD(">=", gequal)
+    SWORD("0=", zequal) SWORD("0<>", znequal)
+    SWORD("0<", zless) SWORD("0<=", zlequal)
+    SWORD("0>", zgreater) SWORD("0>=", zgequal)
+    SWORD("u<", uless) SWORD("u>", ugreater)
+    SWORD("cell+", cell_plus) WORD(cells)
     WORD(min) WORD(max)
     SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
     WORD(dup) WORD(drop) WORD(swap) WORD(over) 
@@ -330,6 +355,7 @@ static void Run(void) {
     SWORD("source-in", source_in)
     SWORD("source-id", source_id)
     SWORD("dictionary-head", dictionary_head) WORD(words)
+    SWORD("date&time", date_time)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(rawyield)
 #ifdef __native_client__
@@ -355,6 +381,17 @@ static void Run(void) {
  _multiply: --sp; *sp *= sp[1]; NEXT;
  _divide: --sp; *sp /= sp[1]; NEXT;
 
+ _muldiv: sp -= 2; *sp = (cell_t)((dcell_t)sp[0] * sp[1] / sp[2]); NEXT;
+ _muldivmod: --sp; dtmp = (dcell_t)sp[-1] * sp[0];
+             sp[-1] = dtmp / sp[1]; sp[0] = dtmp % sp[1]; NEXT;
+ _divmod: sp[1] = sp[-1] / sp[0]; sp[0] = sp[-1] % sp[0]; sp[-1] = sp[1]; NEXT;
+
+ _and: --sp; *sp &= sp[1]; NEXT;
+ _or: --sp; *sp &= sp[1]; NEXT;
+ _xor: --sp; *sp &= sp[1]; NEXT;
+ _invert: *sp = ~*sp; NEXT;
+ _negate: *sp = -*sp; NEXT;
+
  _equal: --sp; *sp = sp[0] == sp[1] ? -1 : 0; NEXT; 
  _nequal: --sp; *sp = sp[0] != sp[1] ? -1 : 0; NEXT; 
  _less: --sp; *sp = sp[0] < sp[1] ? -1 : 0; NEXT; 
@@ -362,6 +399,19 @@ static void Run(void) {
  _greater: --sp; *sp = sp[0] > sp[1] ? -1 : 0; NEXT; 
  _gequal: --sp; *sp = sp[0] >= sp[1] ? -1 : 0; NEXT; 
 
+ _zequal: *sp = *sp == 0 ? -1 : 0; NEXT; 
+ _znequal: *sp = *sp != 0 ? -1 : 0; NEXT; 
+ _zless: *sp = *sp < 0 ? -1 : 0; NEXT; 
+ _zlequal: *sp = *sp <= 0 ? -1 : 0; NEXT; 
+ _zgreater: *sp = *sp > 0 ? -1 : 0; NEXT; 
+ _zgequal: *sp = *sp >= 0 ? -1 : 0; NEXT;
+
+ _uless: --sp; *sp = (ucell_t)sp[0] < (ucell_t)sp[1] ? -1 : 0; NEXT; 
+ _ugreater: --sp; *sp = (ucell_t)sp[0] > (ucell_t)sp[1] ? -1 : 0; NEXT; 
+
+ _cell_plus: *sp = *sp + sizeof(cell_t); NEXT;
+ _cells: *sp = *sp * sizeof(cell_t); NEXT;
+  
  _min: --sp; if (sp[1] < sp[0]) { *sp = sp[1]; } NEXT; 
  _max: --sp; if (sp[1] > sp[0]) { *sp = sp[1]; } NEXT; 
 
@@ -608,6 +658,7 @@ static void Run(void) {
  _source_id: *++sp = (cell_t)&source_id; NEXT;
   
  _dictionary_head: *++sp = (cell_t)&dictionary_head; NEXT;
+ _date_time: sp = DateTime(sp); NEXT;
  _words: PrintWords(); NEXT;
 
  _lparen: source_in = Parse(')') + 1; NEXT;
