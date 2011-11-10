@@ -1,5 +1,3 @@
-: rawkey s" i" post rawyield inbound ;
-
 : chardump dup if 0 do dup i + c@ . loop cr then drop ;
 
 : utf8-size ( n -- n )
@@ -23,9 +21,10 @@
     utf8-first
     r> 1 ?do utf8-step loop nip ;
 
-: key begin rawkey utf8 dup 0>= over 256 < and until ;
+: rawkey s" i" post rawyield inbound utf8 ;
+
+: ekey begin rawkey dup 0>= until ;
     
-( : test begin rawkey utf8 dup 0< if drop else . cr then again ; )
-: test begin key . cr again ;
+: test begin ekey . again ;
 
 test
