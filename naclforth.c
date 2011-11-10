@@ -323,6 +323,12 @@ static void Run(void) {
     SWORD(">r", push) SWORD("r>", pop)
     SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
     SWORD("*/", muldiv) SWORD("*/mod", muldivmod) SWORD("/mod", divmod)
+    WORD(lshift) WORD(rshift)
+    SWORD("1+", one_add) SWORD("1-", one_subtract)
+    SWORD("2+", two_add) SWORD("2-", two_subtract)
+    SWORD("4+", four_add) SWORD("4-", four_subtract)
+    SWORD("2*", two_multiply) SWORD("2/", two_divide)
+    SWORD("4*", four_multiply) SWORD("4/", four_divide)
     WORD(and) WORD(or) WORD(xor) WORD(invert) WORD(negate)
     SWORD("=", equal) SWORD("<>", nequal)
     SWORD("<", less) SWORD("<=", lequal)
@@ -334,7 +340,12 @@ static void Run(void) {
     SWORD("cell+", cell_plus) WORD(cells)
     WORD(min) WORD(max)
     SWORD("@", load) SWORD("!", store) SWORD("c@", cload) SWORD("c!", cstore)
-    WORD(dup) WORD(drop) WORD(swap) WORD(over) 
+    SWORD("+!", plus_store) SWORD("-!", minus_store)
+    WORD(nip) WORD(dup) WORD(drop) WORD(swap) WORD(over)
+    WORD(rot) SWORD("-rot", minus_rot)
+    SWORD("2dup", two_dup) SWORD("2drop", two_drop)
+    SWORD("2swap", two_swap) SWORD("2over", two_over)
+    SWORD("2rot", two_rot) SWORD("-2rot", minus_two_rot)
     SWORD(",", comma) WORD(here) WORD(allot) WORD(align)
     WORD(allocate) WORD(free) WORD(resize)
     SWORD(".", dot) WORD(emit) WORD(cr) WORD(page)
@@ -386,6 +397,20 @@ static void Run(void) {
              sp[-1] = dtmp / sp[1]; sp[0] = dtmp % sp[1]; NEXT;
  _divmod: sp[1] = sp[-1] / sp[0]; sp[0] = sp[-1] % sp[0]; sp[-1] = sp[1]; NEXT;
 
+ _lshift: --sp; *sp = *sp << sp[1]; NEXT;
+ _rshift: --sp; *sp = (cell_t)(*(ucell_t*)sp >> sp[1]); NEXT;
+
+ _one_add: ++*sp; NEXT;
+ _one_subtract: --*sp; NEXT;
+ _two_add: *sp += 2; NEXT;
+ _two_subtract: *sp -= 2; NEXT;
+ _four_add: *sp += 4; NEXT;
+ _four_subtract: *sp -= 4; NEXT;
+ _two_multiply: *sp *= 2; NEXT;
+ _two_divide: *sp /= 2; NEXT;
+ _four_multiply: *sp *= 4; NEXT;
+ _four_divide: *sp /= 4; NEXT;
+             
  _and: --sp; *sp &= sp[1]; NEXT;
  _or: --sp; *sp &= sp[1]; NEXT;
  _xor: --sp; *sp &= sp[1]; NEXT;
@@ -419,14 +444,34 @@ static void Run(void) {
  _store: sp -= 2; *(cell_t*)sp[2] = sp[1]; NEXT;
  _cload: *sp = *(unsigned char*)*sp; NEXT;
  _cstore: sp -= 2; *(unsigned char*)sp[2] = sp[1]; NEXT;
+ _plus_store: sp -= 2; *(cell_t*)sp[2] += sp[1]; NEXT;
+ _minus_store: sp -= 2; *(cell_t*)sp[2] -= sp[1]; NEXT;
 
  _push: *++rp = *sp--; NEXT;
  _pop: *++sp = *rp--; NEXT;
 
+ _nip: --sp; sp[0] = sp[1]; NEXT;
  _dup: ++sp; sp[0] = sp[-1]; NEXT;
  _drop: --sp; NEXT;
  _swap: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[1]; NEXT;
  _over: ++sp; *sp = sp[-2]; NEXT;
+ _rot: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[-2]; sp[-2] = sp[1]; NEXT ;
+ _minus_rot: sp[1] = sp[-2]; sp[-2] = sp[-1]; sp[-1] = sp[0]; sp[0] = sp[1]; NEXT ;
+
+ _two_dup: sp += 2; sp[0] = sp[-2]; sp[-1] = sp[-3]; NEXT;
+ _two_drop: sp -= 2; NEXT;
+ _two_swap: sp[1] = sp[-1]; sp[2] = sp[0];
+            sp[-1] = sp[-3]; sp[0] = sp[-2];
+            sp[-3] = sp[1]; sp[-2] = sp[2]; NEXT;
+ _two_over: sp += 2; sp[0] = sp[-4]; sp[-1] = sp[-5]; NEXT;
+ _two_rot: sp[1] = sp[-1]; sp[2] = sp[0];
+           sp[-1] = sp[-3]; sp[0] = sp[-2];
+           sp[-3] = sp[-5]; sp[-2] = sp[-4];
+           sp[-5] = sp[1]; sp[-4] = sp[2]; NEXT;
+ _minus_two_rot: sp[1] = sp[-5]; sp[2] = sp[-4];
+                 sp[-5] = sp[-3]; sp[-4] = sp[-2];
+                 sp[-3] = sp[-1]; sp[-2] = sp[0];
+                 sp[-1] = sp[1]; sp[0] = sp[2]; NEXT;
 
  _comma: COMMA(*sp--); NEXT;
  _here: *++sp = (cell_t)here; NEXT;
