@@ -83,14 +83,15 @@ class ReadHandler(webapp.RequestHandler):
     self.post()
     
   def post(self):
-    owner = int(self.request.get('owner'))
+    uinfo = GetUserInfo()
+    
+    owner = int(self.request.get('owner', uinfo['id']))
     filename = self.request.get('filename')
 
     logging.debug('reading %d:%s' % (owner, filename))
 
     # Check access rights.
     if not filename.startswith('/public/'):
-      uinfo = GetUserInfo()
       # Only you can read files outside /public/.
       if uinfo['id'] != owner:
         self.response.set_status(403)  # forbidden
