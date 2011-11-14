@@ -1,5 +1,3 @@
-#include <assert.h>
-#include <ctype.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,9 +22,27 @@ static struct PPB_Messaging* ppb_messaging_interface = NULL;
 static struct PPB_Var* ppb_var_interface = NULL;
 static PP_Module pp_module = 0;
 static PP_Instance pp_instance = 0;
-
 #endif
 
+// Turn off asserts to make nacl version leaner.
+#ifdef __native_client__
+#define assert(x)
+#else
+#include <assert.h>
+#endif
+
+// Define ctype stuff locally for nacl.
+#ifdef __native_client__
+int isspace(int ch) {
+  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
+}
+int tolower(int ch) {
+  if (ch >= 'A' && ch <= 'Z') return ch - 'A' + 'a';
+  return ch;
+}
+#else
+#include <ctype.h>
+#endif
 
 #define STACK_SIZE (1024 * 1024)
 #define RSTACK_SIZE (1024 * 1024)
@@ -272,6 +288,15 @@ static void PrintWords(void) {
 }
 
 static cell_t *DateTime(cell_t *sp) {
+#ifdef __native_client__
+  // TODO: see if we can implement for nacl.
+  *++sp = 0;
+  *++sp = 0;
+  *++sp = 0;
+  *++sp = 0;
+  *++sp = 0;
+  *++sp = 0;
+#else
   time_t rawtime;
   struct tm t;
   time(&rawtime);
@@ -282,6 +307,7 @@ static cell_t *DateTime(cell_t *sp) {
   *++sp = t.tm_mday;
   *++sp = t.tm_mon;
   *++sp = t.tm_year;
+#endif
   return sp;
 }
 
@@ -293,7 +319,9 @@ static void Run(void) {
   char ch;
   cell_t len;
   cell_t *x;
+#ifndef __native_client__
   dcell_t dtmp;
+#endif
 
   static DICTIONARY base_dictionary[] = {
     // Put some at predictable locations.
@@ -347,7 +375,10 @@ static void Run(void) {
     SWORD("2swap", two_swap) SWORD("2over", two_over)
     SWORD("2rot", two_rot) SWORD("-2rot", minus_two_rot)
     SWORD(",", comma) WORD(here) WORD(allot) WORD(align)
-    WORD(allocate) WORD(free) WORD(resize)
+    WORD(allocate) WORD(free)
+#ifndef __native_client__
+    WORD(resize) WORD(bye)
+#endif
     SWORD(".", dot) WORD(emit) WORD(cr) WORD(page)
     SWORD(":", colon) SIWORD(";", semicolon)
     WORD(immediate) SIWORD("[", lbracket) SIWORD("]", rbracket)
@@ -368,7 +399,7 @@ static void Run(void) {
     SWORD("dictionary-head", dictionary_head) WORD(words)
     SWORD("date&time", date_time)
     SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
-    WORD(bye) WORD(rawyield)
+    WORD(rawyield)
 #ifdef __native_client__
     WORD(post) WORD(inbound)
 #endif
@@ -392,9 +423,15 @@ static void Run(void) {
  _multiply: --sp; *sp *= sp[1]; NEXT;
  _divide: --sp; *sp /= sp[1]; NEXT;
 
+#ifdef __native_client__
+  // TODO!
+ _muldiv: NEXT;
+ _muldivmod: NEXT;
+#else
  _muldiv: sp -= 2; *sp = (cell_t)((dcell_t)sp[0] * sp[1] / sp[2]); NEXT;
  _muldivmod: --sp; dtmp = (dcell_t)sp[-1] * sp[0];
              sp[-1] = dtmp / sp[1]; sp[0] = dtmp % sp[1]; NEXT;
+#endif
  _divmod: sp[1] = sp[-1] / sp[0]; sp[0] = sp[-1] % sp[0]; sp[-1] = sp[1]; NEXT;
 
  _lshift: --sp; *sp = *sp << sp[1]; NEXT;
@@ -479,8 +516,10 @@ static void Run(void) {
  _align: Align(); NEXT;
  _allocate: *sp = (cell_t)malloc(*sp); ++sp; sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
  _free: free((void*)*sp--); *++sp = 0; NEXT;
+#ifndef __native_client__
  _resize: len = *sp--; *sp = (cell_t)realloc((void*)*sp, len);
           sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
+#endif
 
  _dot: PrintNumber(*sp--); NEXT;
  _type: len = *sp--; Print((char*)*sp--, len, 0); NEXT;
@@ -629,7 +668,8 @@ static void Run(void) {
     source_length = 0;
 #ifdef __native_client__
     if (inbound_message) {
-      input_buffer = realloc(input_buffer, inbound_message_length + 1);
+      free(input_buffer);
+      input_buffer = malloc(inbound_message_length + 1);
       memcpy(input_buffer, inbound_message, inbound_message_length);
       source = input_buffer;
       source_length = inbound_message_length;
@@ -745,7 +785,9 @@ static void Run(void) {
     NEXT;
   }
 
+#ifndef __native_client__
  _bye: exit(0); goto _bye;
+#endif
   
  _rawyield: *++rp = (cell_t)ip; sp_global = sp; rp_global = rp; return;
   
@@ -849,6 +891,71 @@ PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
 }
 
 PP_EXPORT void PPP_ShutdownModule() {
+}
+
+void _start(void) {
+}
+
+static char malloc_space[100000000];
+static char *malloc_ptr = malloc_space;
+
+void *malloc(size_t sz) {
+  
+  void *ret;
+  ret = malloc_ptr;
+  malloc_ptr += sz;
+  return ret;
+}
+
+void free(void *ptr) {
+}
+
+size_t strlen(const char *s) {
+  size_t len = 0;
+  while (*s) {
+    ++s;
+    ++len;
+  }
+  return len;
+}
+
+void *memcpy(void *s1, const void *s2, size_t n) {
+  char *dst = s1;
+  const char *src = s2;
+  while (n) {
+    --n;
+    *dst++ = *src++;
+  }
+  return s1;
+}
+
+void *memmove(void *s1, const void *s2, size_t n) {
+  char *dst = s1;
+  const char *src = s2;
+
+  if (dst < src) {
+    src += (n - 1);
+    dst += (n - 1);
+    while (n) {
+      --n;
+      *dst-- = *src--;
+    }
+  } else {
+    while (n) {
+      --n;
+      *dst++ = *src++;
+    }
+  }
+  return s1;
+}
+
+void *memset(void *b, int c, size_t len) {
+  char *dst = b;
+  while (len) {
+    --len;
+    *dst++ = (char)c;
+  }
+  return b;
 }
 
 #else

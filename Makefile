@@ -8,7 +8,7 @@ STRIP64=${NACL_SDK_BIN_DIR}/x86_64-nacl-strip
 
 
 CFLAGS=-O3 -Wall -Werror
-LDFLAGS=$(CFLAGS)
+LDFLAGS=$(CFLAGS) -nostdlib -nodefaultlibs
 LIBS=-lppapi -lnacl_dyncode -lpthread
 
 
