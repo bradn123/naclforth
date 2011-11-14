@@ -24,6 +24,7 @@
                      "Lucidatypewriter"
                      monospace;
         font-size: 20px;
+        white-space: pre-wrap;
       }
       span.email {
         color: #000000;
@@ -88,11 +89,9 @@
         function htmlEscape(str) {
           return str.replace(
               /&/g, '&amp;').replace(
-              / /g, '&emsp;').replace(
               />/g, '&gt;').replace(
               /</g, '&lt;').replace(
-              /"/g, '&quot;').replace(
-              /\n/g, '<br>\n'); 
+              /"/g, '&quot;');
         }
 
         function processKeys() {
@@ -109,7 +108,7 @@
               reading_line = false;
               var line = accept_buffer;
               accept_buffer = '';
-              appendOut(htmlEscape(line) + '<br>\n');
+              appendOut(htmlEscape(line) + '\n');
               event_buffer = event_buffer.substr(i + 1);
               refreshPrompt();
               forth.postMessage(line);
@@ -216,7 +215,7 @@
               break;
             default:
               appendOut('ERROR - Unknown message prefix "' +
-                        prefix + '"<br>\n');
+                        prefix + '"\n');
               break;
           }
         }
@@ -237,7 +236,7 @@
                 start('{{ user_id }} ' + text);
               } else {
                 appendOut('ERROR - Unable to load boot code, ');
-                appendOut('falling back to built-ins!<br>\n');
+                appendOut('falling back to built-ins!\n');
                 start('{{ user_id }}');
                 return;
               }
@@ -262,6 +261,6 @@
              width="0" height="0" src="naclforth.nmf"/>
     </div>
 
-    <div id="outdiv" class="console"><span id="out">Loading... </span><span id="prompt"></span><span id="cursor"><span class="cursor">&emsp;</span></span></div>
+    <div id="outdiv" class="console"><span id="out">Loading... </span><span id="prompt"></span><span id="cursor"><span class="cursor"> </span></span></div>
   </div></body>
 </html>
