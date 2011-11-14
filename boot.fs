@@ -6,7 +6,7 @@ constant user-id
 : utf8-size ( n -- n )
     0 swap begin
     dup 128 and while
-      swap 1+ swap 2* 
+      swap 1+ swap 2*
     repeat drop
     1 max ;
 : utf8-first ( a n -- a+1 f )
@@ -21,7 +21,7 @@ constant user-id
     utf8-first
     r> 1 ?do utf8-step loop nip ;
 
-( raw keys )    
+( raw keys )
 : rawkey s" i" post rawyield inbound utf8 ;
 : ekey begin rawkey dup 0>= until ;
 
@@ -50,14 +50,14 @@ variable console-ptr
   dup 62 = if drop s" &gt;" sconsole, exit then
   dup 34 = if drop s" &quot;" sconsole, exit then
   dup 10 = if drop s" <br>" sconsole, 10 console, exit then
-  console, 
+  console,
 ;
 
 : console-row
    console-width *
    console-width 0 do
      dup i +
-     dup console-cursor @ = if s" <span class=cursor>" sconsole, then 
+     dup console-cursor @ = if s" <span class=cursor>" sconsole, then
      dup console-text + c@ cesc,
      console-cursor @ = if s" </span>" sconsole, then
    loop
@@ -95,7 +95,7 @@ variable x
 variable y
 variable scroll
 
-: draw   scroll @ columns * workarea @ + console-text console-size move 
+: draw   scroll @ columns * workarea @ + console-text console-size move
 x @ y @ columns * + console-cursor ! console-update ;
 
 
@@ -106,7 +106,7 @@ x @ y @ columns * + console-cursor ! console-update ;
    x @ 0< if 0 x ! then
    x @ columns >= if columns 1- x ! then
    y @ 0< if 0 y ! scroll @ 0> if -1 scroll +! then then
-   y @ console-height >= if console-height 1- y ! 1 scroll +! then 
+   y @ console-height >= if console-height 1- y ! 1 scroll +! then
 ;
 
 : keydown 256 + ;
@@ -148,15 +148,14 @@ columns maxrows * allocate drop workarea2 !
   wa2-reset
   s" hPOST|/_read|filename|" wa2, wa2,
   wa2-post
-  workarea @ swap move
+  over c@ 2 = if
+    swap 2 + swap workarea @ swap move
+  else
+    drop drop ." Failed to load file." cr
+  then
 ;
-
-
-
-
 
 ( boot message )
 : boot-message
     page ." NativeClient Forth v0.1" cr ;
 boot-message
-

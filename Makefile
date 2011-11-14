@@ -86,5 +86,8 @@ deploy: naclforth_web
 local: naclforth_web
 	dev_appserver.py -d $(DEPLOY)
 
+getboot:
+	curl 'https://naclforth.appspot.com/_read?owner=0&filename=%2fpublic%2f_boot' -o - | build/reduce80.py >boot.fs
+
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
