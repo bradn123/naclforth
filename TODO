@@ -4,6 +4,8 @@ Things to do:
 - Add mechanism to call native functions directly.
 - Decide if fixing the registers makes sense.
 - Look into why the nexes are so big.
+  - tried building without glibc, went down to 200k.
+  - didn't work.
 - Write better editor.
 - Look into utf8 vs octet for storage.
-- Look into pacakaged app vs hosted.
+- Look into packaged app vs hosted.
