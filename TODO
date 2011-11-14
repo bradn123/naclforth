@@ -1,0 +1,9 @@
+Things to do:
+
+- Add enough plumbing to make vocabularies convenient.
+- Add mechanism to call native functions directly.
+- Decide if fixing the registers makes sense.
+- Look into why the nexes are so big.
+- Write better editor.
+- Look into utf8 vs octet for storage.
+- Look into pacakaged app vs hosted.
