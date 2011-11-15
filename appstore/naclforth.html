@@ -36,13 +36,14 @@
     </style>
   </head>
   <body>
-    <div id="login" align="right">
-    {% if signed_in %}
-      <span class="email">[ {{ email }} ]</span>
-      <a href="{{ sign_out }}">Sign out</a>
-    {% else %}
-      <a href="{{ sign_in }}">Sign in</a>
-    {% endif %}
+    <div id="account" align="right">
+      <span id="signin">
+        <a href="https://naclforth.appspot.com/login" target="_blank">Sign in</a>
+      </span>
+      <span id="signout" style="display: none">
+        <span class="email" id="account_email"></span>
+        <a href="https://naclforth.appspot.com/logout" target="_blank">Sign out</a>
+      </span>
     </div>
     
     <hr color="#333333"/>
@@ -227,17 +228,17 @@
         }
         
         function moduleDidLoad() {
-          var boot = '{{ boot }}';
+          var boot = 'https://naclforth.appspot.com/_read?owner=0&filename=%2fpublic%2f_boot';
           if (boot == '') {
-            start('{{ user_id }}');
+            start('-1');
           } else {
             httpRequest(boot, 'GET', {}, function(status, text) {
               if (status == 200) {
-                start('{{ user_id }} ' + text);
+                start('-1 ' + text);
               } else {
                 appendOut('ERROR - Unable to load boot code, ');
                 appendOut('falling back to built-ins!\n');
-                start('{{ user_id }}');
+                start('-1');
                 return;
               }
             });
@@ -250,12 +251,7 @@
               'load', moduleDidLoad, true);
         }
         
-        if (window.chrome.app.isInstalled ||
-            window.location.hostname == 'localhost') {
-          init();
-        } else {
-          window.location = '/getapp';
-        }
+        init();
       </script>
       <embed type="application/x-nacl" id="forth"
              width="0" height="0" src="naclforth.nmf"/>

@@ -60,15 +60,16 @@ $(OUT_APPENGINE)/%: web/%
 	mkdir -p $(@D)
 	cp $< $@
 
+
 naclforth_appengine: \
     $(OUT_APPENGINE_STATIC)/favicon.ico \
     $(OUT_APPENGINE_STATIC)/favicon.png \
-    $(OUT_APPENGINE)/naclforth.py \
-    $(OUT_APPENGINE/app.yaml \
-    $(OUT_APPENGINE)/index.yaml \
     $(OUT_APPENGINE_TEMPLATES)/getchrome.html \
     $(OUT_APPENGINE_TEMPLATES)/getapp.html \
-    $(OUT_APPENGINE_TEMPLATES)/index.html
+    $(OUT_APPENGINE_TEMPLATES)/index.html \
+    $(OUT_APPENGINE)/naclforth.py \
+    $(OUT_APPENGINE/app.yaml \
+    $(OUT_APPENGINE)/index.yaml
 
 
 $(OUT_APPENGINE) $(OUT_APPENGINE_STATIC) $(OUT_APPENGINE_TEMPLATES) \
@@ -84,20 +85,21 @@ APPSTORE_PACKAGE_FILES = \
     $(OUT_APPSTORE_PACKAGE)/manifest.json \
     $(OUT_APPSTORE_PACKAGE)/naclforth_16.png \
     $(OUT_APPSTORE_PACKAGE)/naclforth_128.png \
-    $(OUT_APPSTORE_PACKAGE)/naclforth.nmf
+    $(OUT_APPSTORE_PACKAGE)/naclforth.nmf \
+    $(OUT_APPSTORE_PACKAGE)/naclforth.html
 
 $(OUT_APPSTORE)/naclforth.zip: $(APPSTORE_PACKAGE_FILES)
 	-rm -f $@
-	zip -r $@ $(OUT_APPENGINE)
+	zip -r $@ $(OUT_APPSTORE)
 
 $(OUT_APPSTORE_PACKAGE)/%: appstore/%
 	mkdir -p $(@D)
 	cp $< $@
 
-deploy: naclforth_web
+deploy: naclforth_appengine
 	appcfg.py update $(OUT_APPENGINE)
 
-local: naclforth_web
+local: naclforth_appengine
 	dev_appserver.py -d $(OUT_APPENGINE)
 
 getboot:

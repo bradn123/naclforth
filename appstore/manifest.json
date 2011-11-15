@@ -1,14 +1,14 @@
 {
   "name": "NativeClient Forth",
   "description": "Forth programming language in NativeClient sandbox",
-  "version": "0.0.0.2",
+  "version": "0.0.0.3",
   "app": {
-    "urls": [
-      "https://naclforth.appspot.com/"
-    ],
     "launch": {
-      "web_url": "https://naclforth.appspot.com/"
-    }
+      "local_path": "naclforth.html"
+    },
+    "permissions": [
+      "*://naclforth.appspot.com/"
+    ]
   },
   "icons": {
     "128": "naclforth_128.png",
