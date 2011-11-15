@@ -19,75 +19,91 @@ LDFLAGS_X86_64=$(LDFLAGS)
 
 
 OUT=out
-DEPLOY=$(OUT)/deploy_appengine
-DEPLOY_STATIC=$(DEPLOY)/static
-DEPLOY_TEMPLATES=$(DEPLOY)/templates
-OUT_HOSTED=$(OUT)/deploy_hosted
 OBJ=$(OUT)/obj
 
+OUT_APPENGINE=$(OUT)/appengine
+OUT_APPENGINE_STATIC=$(OUT_APPENGINE)/static
+OUT_APPENGINE_TEMPLATES=$(OUT_APPENGINE)/templates
 
-NACLFORTH32=$(DEPLOY_STATIC)/naclforth_x86-32.nexe
-NACLFORTH64=$(DEPLOY_STATIC)/naclforth_x86-64.nexe
+OUT_APPSTORE=$(OUT)/appstore
+OUT_APPSTORE_PACKAGE=$(OUT_APPSTORE)/package
+
+OUT_HOST=$(OUT)/host
 
 
-all: naclforth_web naclforth_hosted $(OUT)/naclforth
+NACLFORTH32=$(OUT_APPSTORE_PACKAGE)/naclforth_x86-32.nexe
+NACLFORTH64=$(OUT_APPSTORE_PACKAGE)/naclforth_x86-64.nexe
 
 
-$(OUT)/naclforth: naclforth.c
+all: naclforth_appengine naclforth_appstore $(OUT_HOST)/naclforth
+
+
+$(OUT_HOST)/naclforth: naclforth.c | $(OUT_HOST)
 	gcc $< -o $@ -Wall -Werror -g -m32
 
 
-$(NACLFORTH32): $(OBJ)/naclforth_x86-32.o | $(DEPLOY_STATIC)
+$(NACLFORTH32): $(OBJ)/naclforth_x86-32.o | $(OUT_APPSTORE_PACKAGE)
 	${CC32} -o $@ $< ${LDFLAGS_X86_32} ${LIBS}
 	${STRIP32} $@
 
-$(NACLFORTH64): $(OBJ)/naclforth_x86-64.o | $(DEPLOY_STATIC)
+$(NACLFORTH64): $(OBJ)/naclforth_x86-64.o | $(OUT_APPSTORE_PACKAGE)
 	${CC64} -o $@ $< ${LDFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@
 
-$(OBJ)/naclforth_x86-32.o: naclforth.c $(OBJ)
+$(OBJ)/naclforth_x86-32.o: naclforth.c | $(OBJ)
 	${CC32} -o $@ -c $< ${CFLAGS_X86_32}
 
-$(OBJ)/naclforth_x86-64.o: naclforth.c $(OBJ)
+$(OBJ)/naclforth_x86-64.o: naclforth.c | $(OBJ)
 	${CC64} -o $@ -c $< ${CFLAGS_X86_64}
 
-$(DEPLOY)/%: web/%
+$(OUT_APPENGINE)/%: web/%
 	mkdir -p $(@D)
 	cp $< $@
 
-naclforth_web: $(NACLFORTH32) \
-               $(NACLFORTH64) \
-               $(DEPLOY_STATIC)/favicon.ico \
-               $(DEPLOY_STATIC)/favicon.png \
-               $(DEPLOY_STATIC)/naclforth.nmf \
-               $(DEPLOY)/naclforth.py \
-               $(DEPLOY)/app.yaml \
-               $(DEPLOY)/index.yaml \
-               $(DEPLOY_TEMPLATES)/getchrome.html \
-               $(DEPLOY_TEMPLATES)/getapp.html \
-               $(DEPLOY_TEMPLATES)/naclforth.html
+naclforth_appengine: \
+    $(OUT_APPENGINE_STATIC)/favicon.ico \
+    $(OUT_APPENGINE_STATIC)/favicon.png \
+    $(OUT_APPENGINE)/naclforth.py \
+    $(OUT_APPENGINE/app.yaml \
+    $(OUT_APPENGINE)/index.yaml \
+    $(OUT_APPENGINE_TEMPLATES)/getchrome.html \
+    $(OUT_APPENGINE_TEMPLATES)/getapp.html \
+    $(OUT_APPENGINE_TEMPLATES)/index.html
 
-$(DEPLOY_TEMPLATES)/%.html: web/templates/%.html
-	cp $< $@
 
-$(OUT) $(DEPLOY) $(OBJ) $(DEPLOY_STATIC) $(OUT_HOSTED):
+$(OUT_APPENGINE) $(OUT_APPENGINE_STATIC) $(OUT_APPENGINE_TEMPLATES) \
+   $(OUT_APPSTORE) $(OUT_APPSTORE_PACKAGE) \
+   $(OUT) $(OUT_HOST) $(OBJ):
 	mkdir -p $@
 
-naclforth_hosted: $(OUT_HOSTED)/naclforth.zip
+naclforth_appstore: $(OUT_APPSTORE)/naclforth.zip
 
-$(OUT_HOSTED)/naclforth.zip: $(OUT_HOSTED)
-	-rm -f hosted_app/*~
+APPSTORE_PACKAGE_FILES = \
+    $(NACLFORTH32) \
+    $(NACLFORTH64) \
+    $(OUT_APPSTORE_PACKAGE)/manifest.json \
+    $(OUT_APPSTORE_PACKAGE)/naclforth_16.png \
+    $(OUT_APPSTORE_PACKAGE)/naclforth_128.png \
+    $(OUT_APPSTORE_PACKAGE)/naclforth.nmf
+
+$(OUT_APPSTORE)/naclforth.zip: $(APPSTORE_PACKAGE_FILES)
 	-rm -f $@
-	zip -r $@ hosted_app
+	zip -r $@ $(OUT_APPENGINE)
+
+$(OUT_APPSTORE_PACKAGE)/%: appstore/%
+	mkdir -p $(@D)
+	cp $< $@
 
 deploy: naclforth_web
-	appcfg.py update $(DEPLOY)
+	appcfg.py update $(OUT_APPENGINE)
 
 local: naclforth_web
-	dev_appserver.py -d $(DEPLOY)
+	dev_appserver.py -d $(OUT_APPENGINE)
 
 getboot:
 	curl 'https://naclforth.appspot.com/_read?owner=0&filename=%2fpublic%2f_boot' -o - | build/reduce80.py >boot.fs
 
 clean:
 	rm -rf $(OUT) `find ./ -name "*~"`
+
+.PHONY: clean naclforth_appengine naclforth_appstore all deploy local getboot
