@@ -47,19 +47,15 @@ def GetUserInfo():
       'id': -1,
   }
 
-  logging.info('AAAA')
   who = users.get_current_user()
   if not who: return info
-  logging.info('BBBB')
 
   user_id = who.user_id()
   if not user_id: return info
   user_key = 'userinfo_' + user_id
-  logging.info('CCCC')
 
   info = memcache.get(user_key)
   if info: return info
-  logging.info('DDDD')
 
   uinfo = UserInfo.gql('where who=:1', who).get()
   if not uinfo:
@@ -69,14 +65,12 @@ def GetUserInfo():
     uinfo.who = who
     uinfo.id = id
     uinfo.put()
-    logging.info('EEEE')
 
   info = {
       'id': uinfo.id,
   }
 
   memcache.add(user_key, info, 60)
-  logging.info('FFFF')
   
   return info
 
