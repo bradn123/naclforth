@@ -9,3 +9,4 @@ Things to do:
 - Write better editor.
 - Look into utf8 vs octet for storage.
 - Look into packaged app vs hosted.
+  - DONE, packaged is harder but probably better.
