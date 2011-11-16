@@ -146,7 +146,7 @@ columns maxrows * allocate drop workarea2 !
 
 : load ( name namelen -- )
   wa2-reset
-  s" hPOST|/_read|filename|" wa2, wa2,
+  s" hPOST|https://naclforth.appspot.com/_read|filename|" wa2, wa2,
   wa2-post
   over c@ 2 = if
     swap 2 + swap workarea @ swap move

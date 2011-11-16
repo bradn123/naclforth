@@ -197,7 +197,7 @@
               parts = parts.slice(2);
               var values = {};
               while (parts.length) {
-                if (parts[0].substr(0, 1) == '_') {
+                if (parts[0].substr(0, 1) == '~') {
                   values[parts[0].substr(1)] = parts.slice(1).join('|');
                   parts = [];
                 } else {
