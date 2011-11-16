@@ -223,21 +223,27 @@
           forth.addEventListener('message', handleMessage);
           forth.postMessage(text);
         }
-        
+
+        function bootForAccount(boot) {
+          var status = 'https://naclforth.appspot.com/rawstatus';
+          httpRequest(status, 'GET', {}, function(status, text) {
+            if (status == 200) {
+              start(text + ' ' + boot);
+            } else {
+              start('-1 ' + boot);
+            }
+          });
+        }
+
         function moduleDidLoad() {
           var boot = 'https://naclforth.appspot.com/_read?owner=0&filename=%2fpublic%2f_boot';
-          if (boot == '') {
-            start('-1');
-          } else {
-            httpRequest(boot, 'GET', {}, function(status, text) {
-              if (status == 200) {
-                start('-1 ' + text);
-              } else {
-                appendOut('ERROR - Unable to load boot code, ');
-                appendOut('falling back to built-ins!\n');
-                start('-1');
-                return;
-              }
+          httpRequest(boot, 'GET', {}, function(status, text) {
+            if (status == 200) {
+              bootForAccount(text);
+            } else {
+              appendOut('ERROR - Unable to load boot code, ');
+              appendOut('falling back to built-ins!\n');
+              bootForAccount('');
             });
           }
         }
