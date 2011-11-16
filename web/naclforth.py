@@ -83,7 +83,7 @@ class RawStatusPageHandler(webapp.RequestHandler):
     self.response.headers['Access-Control-Allow-Origin'] = '*'
     uinfo = GetUserInfo()
 
-    self.response.headers['Content-Type'] = 'application/octet-stream'
+    self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write(uinfo['id'])
 
 
