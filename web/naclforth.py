@@ -75,14 +75,54 @@ def GetUserInfo():
   return info
 
 
-class ReadHandler(webapp.RequestHandler):
-  def get(self):
-    self.post()
-
+class RawStatusPageHandler(webapp.RequestHandler):
   def get(self):
     self.post()
     
   def post(self):
+    self.response.headers['Access-Control-Allow-Origin'] = '*'
+    uinfo = GetUserInfo()
+
+    self.response.headers['Content-Type'] = 'application/octet-stream'
+    self.response.out.write(uinfo['id'])
+
+
+class StatusPageHandler(webapp.RequestHandler):
+  def get(self):
+    self.post()
+    
+  def post(self):
+    fields = {}
+    who = users.get_current_user()
+    if who:
+      fields['signed_in'] = True
+      fields['email'] = who.email()
+      fields['sign_out'] = users.create_logout_url('/close')
+    else:
+      fields['signed_in'] = False
+      fields['sign_in'] = users.create_login_url('/close')
+    path = os.path.join(os.path.dirname(os.path.abspath(
+          __file__)), 'templates', 'status.html')
+    self.response.out.write(template.render(path, fields))
+
+
+class ClosePageHandler(webapp.RequestHandler):
+  def get(self):
+    self.post()
+    
+  def post(self):
+    fields = {}
+    path = os.path.join(os.path.dirname(os.path.abspath(
+          __file__)), 'templates', 'close.html')
+    self.response.out.write(template.render(path, fields))
+
+
+class ReadHandler(webapp.RequestHandler):
+  def get(self):
+    self.post()
+    
+  def post(self):
+    self.response.headers['Access-Control-Allow-Origin'] = '*'
     uinfo = GetUserInfo()
     
     owner = int(self.request.get('owner', uinfo['id']))
@@ -112,13 +152,15 @@ class ReadHandler(webapp.RequestHandler):
     else:
       logging.debug('read from memcache')
 
-    self.response.headers['Content-type'] = 'application/octet-stream'
+    self.response.headers['Content-Type'] = 'application/octet-stream'
     self.response.out.write(data)
     logging.debug('read success')
 
 
 class WriteHandler(webapp.RequestHandler):
   def post(self):
+    self.response.headers['Access-Control-Allow-Origin'] = '*'
+    
     filename = self.request.get('filename')
     data = self.request.get('data')
                   
@@ -153,30 +195,7 @@ class WriteHandler(webapp.RequestHandler):
 
 class MainPageHandler(webapp.RequestHandler):
   def get(self):
-    # Check that were running in Chrome of a high enough version.
-    agent = self.request.headers.get('User-Agent', '')
-    m = re.match('.*Chrom[^/]+\/([0-9]+)\..*', agent)
-    if not m or int(m.group(1)) < 14:
-      self.redirect('/getchrome')
-      return
-    
-    boot = self.request.get('boot', '/_read?owner=0&filename=%2fpublic%2f_boot')
-    uinfo = GetUserInfo()
-    fields = {
-        'user_id': uinfo['id'],
-        'boot': boot,
-    }
-    who = users.get_current_user()
-    if who:
-      fields['signed_in'] = True
-      fields['email'] = who.email()
-      fields['sign_out'] = users.create_logout_url(self.request.uri)
-    else:
-      fields['signed_in'] = False
-      fields['sign_in'] = users.create_login_url(self.request.uri)
-    path = os.path.join(os.path.dirname(os.path.abspath(
-          __file__)), 'templates', 'naclforth.html')
-    self.response.out.write(template.render(path, fields))
+    self.redirect('/getapp')
 
 
 class GetChromePageHandler(webapp.RequestHandler):
@@ -197,6 +216,9 @@ class GetAppPageHandler(webapp.RequestHandler):
 
 application = webapp.WSGIApplication([
     ('/', MainPageHandler),
+    ('/rawstatus', RawStatusPageHandler),
+    ('/status', StatusPageHandler),
+    ('/close', ClosePageHandler),
     ('/getchrome', GetChromePageHandler),
     ('/getapp', GetAppPageHandler),
     ('/_read', ReadHandler),

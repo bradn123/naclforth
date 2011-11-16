@@ -66,9 +66,10 @@ naclforth_appengine: \
     $(OUT_APPENGINE_STATIC)/favicon.png \
     $(OUT_APPENGINE_TEMPLATES)/getchrome.html \
     $(OUT_APPENGINE_TEMPLATES)/getapp.html \
-    $(OUT_APPENGINE_TEMPLATES)/index.html \
+    $(OUT_APPENGINE_TEMPLATES)/close.html \
+    $(OUT_APPENGINE_TEMPLATES)/status.html \
     $(OUT_APPENGINE)/naclforth.py \
-    $(OUT_APPENGINE/app.yaml \
+    $(OUT_APPENGINE)/app.yaml \
     $(OUT_APPENGINE)/index.yaml
 
 
