@@ -1,7 +1,7 @@
 {
   "name": "NativeClient Forth",
   "description": "Forth programming language in NativeClient sandbox",
-  "version": "0.0.0.3",
+  "version": "0.0.0.4",
   "app": {
     "launch": {
       "local_path": "naclforth.html"

@@ -91,7 +91,7 @@ APPSTORE_PACKAGE_FILES = \
 
 $(OUT_APPSTORE)/naclforth.zip: $(APPSTORE_PACKAGE_FILES)
 	-rm -f $@
-	zip -r $@ $(OUT_APPSTORE)
+	cd $(OUT_APPSTORE_PACKAGE) && zip -r ../naclforth.zip .
 
 $(OUT_APPSTORE_PACKAGE)/%: appstore/%
 	mkdir -p $(@D)
