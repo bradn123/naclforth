@@ -82,6 +82,7 @@ class RawStatusPageHandler(webapp.RequestHandler):
   def post(self):
     self.response.headers['Access-Control-Allow-Origin'] = '*'
     uinfo = GetUserInfo()
+    logging.info('login from %s' % str(uinfo['id']))
 
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write(uinfo['id'])
