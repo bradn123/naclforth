@@ -44,12 +44,10 @@ variable console-ptr
 
 : cesc,
   dup 38 = if drop s" &amp;" sconsole, exit then
-  dup 32 = if drop s" &emsp;" sconsole, exit then
   dup 0 = if drop s" &emsp;" sconsole, exit then
   dup 60 = if drop s" &lt;" sconsole, exit then
   dup 62 = if drop s" &gt;" sconsole, exit then
   dup 34 = if drop s" &quot;" sconsole, exit then
-  dup 10 = if drop s" <br>" sconsole, 10 console, exit then
   console,
 ;
 
@@ -62,7 +60,6 @@ variable console-ptr
      console-cursor @ = if s" </span>" sconsole, then
    loop
    drop
-   s" <br>" sconsole,
    10 console,
 ;
 
@@ -77,7 +74,7 @@ variable console-ptr
 ;
 
 : console-end
-    s" c<span class=cursor>&emsp;</span>" post
+    s" c<span class=cursor> </span>" post
 ;
 
 
@@ -139,14 +136,14 @@ columns maxrows * allocate drop workarea2 !
   wa2-reset
   s" hPOST|/_write|filename|" wa2,
   >r wa2,
-  s" |_data|" wa2,
+  s" |~data|" wa2,
   workarea @ r> columns * wa2,
   wa2-post drop drop
 ;
 
 : load ( name namelen -- )
   wa2-reset
-  s" hPOST|https://naclforth.appspot.com/_read|filename|" wa2, wa2,
+  s" hPOST|https://naclforth.appspot.com/_read|owner|0|filename|" wa2, wa2,
   wa2-post
   over c@ 2 = if
     swap 2 + swap workarea @ swap move
