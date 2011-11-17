@@ -200,19 +200,6 @@ class WriteHandler(webapp.RequestHandler):
 
 class MainPageHandler(webapp.RequestHandler):
   def get(self):
-    self.redirect('/getapp')
-
-
-class GetChromePageHandler(webapp.RequestHandler):
-  def get(self):
-    fields = {}
-    path = os.path.join(os.path.dirname(os.path.abspath(
-          __file__)), 'templates', 'getchrome.html')
-    self.response.out.write(template.render(path, fields))
-
-
-class GetAppPageHandler(webapp.RequestHandler):
-  def get(self):
     fields = {}
     path = os.path.join(os.path.dirname(os.path.abspath(
           __file__)), 'templates', 'getapp.html')
@@ -220,12 +207,10 @@ class GetAppPageHandler(webapp.RequestHandler):
 
 
 application = webapp.WSGIApplication([
-    ('/', MainPageHandler),
+    ('/', GetAppPageHandler),
     ('/rawstatus', RawStatusPageHandler),
     ('/status', StatusPageHandler),
     ('/close', ClosePageHandler),
-    ('/getchrome', GetChromePageHandler),
-    ('/getapp', GetAppPageHandler),
     ('/_read', ReadHandler),
     ('/_write', WriteHandler),
 ], debug=True)
