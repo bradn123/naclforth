@@ -207,7 +207,7 @@ class MainPageHandler(webapp.RequestHandler):
 
 
 application = webapp.WSGIApplication([
-    ('/', GetAppPageHandler),
+    ('/', MainPageHandler),
     ('/rawstatus', RawStatusPageHandler),
     ('/status', StatusPageHandler),
     ('/close', ClosePageHandler),
