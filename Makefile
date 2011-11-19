@@ -64,7 +64,6 @@ $(OUT_APPENGINE)/%: web/%
 naclforth_appengine: \
     $(OUT_APPENGINE_STATIC)/favicon.ico \
     $(OUT_APPENGINE_STATIC)/favicon.png \
-    $(OUT_APPENGINE_TEMPLATES)/getchrome.html \
     $(OUT_APPENGINE_TEMPLATES)/getapp.html \
     $(OUT_APPENGINE_TEMPLATES)/close.html \
     $(OUT_APPENGINE_TEMPLATES)/status.html \
