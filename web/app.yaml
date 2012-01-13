@@ -6,6 +6,9 @@ api_version: 1
 default_expiration: "5s"
 
 handlers:
+- url: /googleffb2e0a7be075da2.html
+  static_files: static/googleffb2e0a7be075da2.html
+  upload: static/googleffb2e0a7be075da2.html
 
 - url: /(.*\.(ico|png))
   static_files: static/\1
