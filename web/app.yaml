@@ -11,10 +11,5 @@ handlers:
   static_files: static/\1
   upload: static/(.*\.(ico|png))
 
-- url: /(.*\.(nmf|nexe))
-  static_files: static/\1
-  upload: static/(.*\.(nmf|nexe))
-  mime_type: application/octet-stream
-
 - url: /.*
   script: naclforth.py
