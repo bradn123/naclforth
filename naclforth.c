@@ -20,8 +20,8 @@
 #include <ppapi/c/ppp_instance.h>
 #include <ppapi/c/ppp_messaging.h>
 
-static struct PPB_Messaging* ppb_messaging_interface = NULL;
-static struct PPB_Var* ppb_var_interface = NULL;
+static PPB_Messaging* ppb_messaging_interface = NULL;
+static PPB_Var* ppb_var_interface = NULL;
 static PP_Module pp_module = 0;
 static PP_Instance pp_instance = 0;
 
@@ -90,7 +90,7 @@ static char *inbound_message = 0;
 static cell_t inbound_message_length = 0;
 
 static void PostMessage(const char *data, cell_t len) {
-  struct PP_Var msg = ppb_var_interface->VarFromUtf8(pp_module, (const char*)data, len);
+  struct PP_Var msg = ppb_var_interface->VarFromUtf8((const char*)data, len);
   ppb_messaging_interface->PostMessage(pp_instance, msg);
   ppb_var_interface->Release(msg);
 }
@@ -321,7 +321,8 @@ static void Run(void) {
 #define WORD_TYPE (&base_dictionary[10])
 
     SWORD(">r", push) SWORD("r>", pop)
-    SWORD("+", add) SWORD("-", subtract) SWORD("*", multiply) SWORD("/", divide)
+    SWORD("+", add) SWORD("-", subtract)
+    SWORD("*", multiply) SWORD("/", divide)
     SWORD("*/", muldiv) SWORD("*/mod", muldivmod) SWORD("/mod", divmod)
     WORD(lshift) WORD(rshift)
     SWORD("1+", one_add) SWORD("1-", one_subtract)
@@ -356,7 +357,8 @@ static void Run(void) {
     IWORD(begin) IWORD(again) IWORD(until)
     IWORD(while) IWORD(repeat)
     IWORD(do) SIWORD("?do", qdo) IWORD(loop) SIWORD("+loop", plus_loop)
-    SWORD("sp@", spload) SWORD("sp!", spstore) SWORD("rp@", rpload) SWORD("rp!", rpstore)
+    SWORD("sp@", spload) SWORD("sp!", spstore)
+    SWORD("rp@", rpload) SWORD("rp!", rpstore)
     WORD(i) WORD(j)
     WORD(leave) WORD(exit) WORD(unloop)
     WORD(literal) SWORD("compile,", compile) WORD(find)
@@ -367,7 +369,8 @@ static void Run(void) {
     SWORD("source-id", source_id)
     SWORD("dictionary-head", dictionary_head) WORD(words)
     SWORD("date&time", date_time)
-    SIWORD(".\"", dotquote) SIWORD("s\"", squote) SIWORD("(", lparen) SIWORD("\\", backslash)
+    SIWORD(".\"", dotquote) SIWORD("s\"", squote)
+    SIWORD("(", lparen) SIWORD("\\", backslash)
     WORD(bye) WORD(rawyield)
 #ifdef __native_client__
     WORD(post) WORD(inbound)
@@ -456,7 +459,8 @@ static void Run(void) {
  _swap: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[1]; NEXT;
  _over: ++sp; *sp = sp[-2]; NEXT;
  _rot: sp[1] = sp[0]; sp[0] = sp[-1]; sp[-1] = sp[-2]; sp[-2] = sp[1]; NEXT ;
- _minus_rot: sp[1] = sp[-2]; sp[-2] = sp[-1]; sp[-1] = sp[0]; sp[0] = sp[1]; NEXT ;
+ _minus_rot: sp[1] = sp[-2]; sp[-2] = sp[-1];
+             sp[-1] = sp[0]; sp[0] = sp[1]; NEXT ;
 
  _two_dup: sp += 2; sp[0] = sp[-2]; sp[-1] = sp[-3]; NEXT;
  _two_drop: sp -= 2; NEXT;
@@ -477,7 +481,8 @@ static void Run(void) {
  _here: *++sp = (cell_t)here; NEXT;
  _allot: here = (cell_t*)(*sp-- + (char*)here); NEXT;
  _align: Align(); NEXT;
- _allocate: *sp = (cell_t)malloc(*sp); ++sp; sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
+ _allocate: *sp = (cell_t)malloc(*sp);
+            ++sp; sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
  _free: free((void*)*sp--); *++sp = 0; NEXT;
  _resize: len = *sp--; *sp = (cell_t)realloc((void*)*sp, len);
           sp[0] = sp[-1] == 0 ? -1 : 0; NEXT;
@@ -790,8 +795,7 @@ static void Instance_DidDestroy(PP_Instance instance) {
 }
 
 static void Instance_DidChangeView(PP_Instance instance,
-                                   const struct PP_Rect* position,
-                                   const struct PP_Rect* clip) {
+                                   PP_Resource view) {
 }
 
 static void Instance_DidChangeFocus(PP_Instance instance,
@@ -823,15 +827,15 @@ PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
                                        PPB_GetInterface get_browser) {
   pp_module = a_module_id;
   ppb_messaging_interface =
-      (struct PPB_Messaging*)(get_browser(PPB_MESSAGING_INTERFACE));
-  ppb_var_interface = (struct PPB_Var*)(get_browser(PPB_VAR_INTERFACE));
+      (PPB_Messaging*)(get_browser(PPB_MESSAGING_INTERFACE));
+  ppb_var_interface = (PPB_Var*)(get_browser(PPB_VAR_INTERFACE));
 
   return PP_OK;
 }
 
 PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
   if (strcmp(interface_name, PPP_INSTANCE_INTERFACE) == 0) {
-    static struct PPP_Instance instance_interface = {
+    static PPP_Instance instance_interface = {
       &Instance_DidCreate,
       &Instance_DidDestroy,
       &Instance_DidChangeView,
@@ -840,7 +844,7 @@ PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
     };
     return &instance_interface;
   } else if (strcmp(interface_name, PPP_MESSAGING_INTERFACE) == 0) {
-    static struct PPP_Messaging messaging_interface = {
+    static PPP_Messaging messaging_interface = {
       &Messaging_HandleMessage
     };
     return &messaging_interface;
