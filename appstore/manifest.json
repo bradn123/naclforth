@@ -1,7 +1,8 @@
 {
   "name": "NativeClient Forth",
   "description": "Forth programming language in NativeClient sandbox",
-  "version": "0.0.0.12",
+  "version": "0.0.0.13",
+  "manifest_version": 2,
   "app": {
     "launch": {
       "local_path": "naclforth.html"
@@ -15,5 +16,6 @@
     "128": "naclforth_128.png",
     "16": "naclforth_16.png"
   },
-  "minimum_chrome_version": "14"
+  "minimum_chrome_version": "14",
+  "web_accessible_resources": ["*"]
 }

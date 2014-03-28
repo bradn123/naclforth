@@ -87,6 +87,7 @@ APPSTORE_PACKAGE_FILES = \
     $(OUT_APPSTORE_PACKAGE)/naclforth_16.png \
     $(OUT_APPSTORE_PACKAGE)/naclforth_128.png \
     $(OUT_APPSTORE_PACKAGE)/naclforth.nmf \
+    $(OUT_APPSTORE_PACKAGE)/naclforth.js \
     $(OUT_APPSTORE_PACKAGE)/naclforth.html
 
 $(OUT_APPSTORE)/naclforth.zip: $(APPSTORE_PACKAGE_FILES)
