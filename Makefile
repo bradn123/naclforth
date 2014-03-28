@@ -1,5 +1,5 @@
 NACL_SDK_ROOT?=~/clients/naclports/src
-NACL_SDK_BIN_DIR=${NACL_SDK_ROOT}/toolchain/mac_x86_newlib/bin
+NACL_SDK_BIN_DIR=${NACL_SDK_ROOT}/toolchain/linux_x86_newlib/bin
 
 CC32=${NACL_SDK_BIN_DIR}/i686-nacl-gcc
 CC64=${NACL_SDK_BIN_DIR}/x86_64-nacl-gcc
@@ -7,7 +7,7 @@ STRIP32=${NACL_SDK_BIN_DIR}/i686-nacl-strip
 STRIP64=${NACL_SDK_BIN_DIR}/x86_64-nacl-strip
 
 
-CFLAGS=-O3 -Wall -Werror
+CFLAGS=-O3 -Wall -Werror -I${NACL_SDK_ROOT}/include
 LDFLAGS=$(CFLAGS)
 LIBS=-lppapi -lnacl_dyncode -lpthread
 
