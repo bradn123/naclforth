@@ -3,7 +3,6 @@
   "description": "Forth programming language in NativeClient sandbox",
   "version": "0.0.0.13",
   "manifest_version": 2,
-  "minimum_chrome_version": "28",
   "app": {
     "launch": {
       "local_path": "naclforth.html"
@@ -20,17 +19,17 @@
   "platforms": [
     {
       "nacl_arch": "x86-32",
-      "sub_package_path": "platform/x86-32/"
+      "sub_package_path": "_platform_sepcific/x86-32/"
     },
     {
       "nacl_arch": "x86-64",
-      "sub_package_path": "platform/x86-64/"
+      "sub_package_path": "_platform_specific/x86-64/"
     },
     {
       "nacl_arch": "arm",
-      "sub_package_path": "platform/arm/"
+      "sub_package_path": "_platform_specific/arm/"
     }
   ],
-  "minimum_chrome_version": "14",
+  "minimum_chrome_version": "28",
   "web_accessible_resources": ["*"]
 }
