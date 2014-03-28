@@ -1,10 +1,13 @@
 NACL_SDK_ROOT?=~/clients/naclports/src
-NACL_SDK_BIN_DIR=${NACL_SDK_ROOT}/toolchain/linux_x86_newlib/bin
+NACL_SDK_X86_BIN_DIR=${NACL_SDK_ROOT}/toolchain/linux_x86_newlib/bin
+NACL_SDK_ARM_BIN_DIR=${NACL_SDK_ROOT}/toolchain/linux_arm_newlib/bin
 
-CC32=${NACL_SDK_BIN_DIR}/i686-nacl-gcc
-CC64=${NACL_SDK_BIN_DIR}/x86_64-nacl-gcc
-STRIP32=${NACL_SDK_BIN_DIR}/i686-nacl-strip
-STRIP64=${NACL_SDK_BIN_DIR}/x86_64-nacl-strip
+CC32=${NACL_SDK_X86_BIN_DIR}/i686-nacl-gcc
+CC64=${NACL_SDK_X86_BIN_DIR}/x86_64-nacl-gcc
+CCARM=${NACL_SDK_ARM_BIN_DIR}/arm-nacl-gcc
+STRIP32=${NACL_SDK_X86_BIN_DIR}/i686-nacl-strip
+STRIP64=${NACL_SDK_X86_BIN_DIR}/x86_64-nacl-strip
+STRIPARM=${NACL_SDK_ARM_BIN_DIR}/arm-nacl-strip
 
 
 CFLAGS=-O3 -Wall -Werror -I${NACL_SDK_ROOT}/include
@@ -14,8 +17,10 @@ LIBS=-lppapi -lnacl_dyncode -lpthread
 
 CFLAGS_X86_32=-DARCH_X86_32 $(CFLAGS)
 CFLAGS_X86_64=-DARCH_X86_64 $(CFLAGS)
+CFLAGS_ARM=-DARCH_ARM $(CFLAGS)
 LDFLAGS_X86_32=$(LDFLAGS)
 LDFLAGS_X86_64=$(LDFLAGS)
+LDFLAGS_ARM=$(LDFLAGS)
 
 
 OUT=out
@@ -33,6 +38,7 @@ OUT_HOST=$(OUT)/host
 
 NACLFORTH32=$(OUT_APPSTORE_PACKAGE)/naclforth_x86-32.nexe
 NACLFORTH64=$(OUT_APPSTORE_PACKAGE)/naclforth_x86-64.nexe
+NACLFORTHARM=$(OUT_APPSTORE_PACKAGE)/naclforth_arm.nexe
 
 
 all: naclforth_appengine naclforth_appstore $(OUT_HOST)/naclforth
@@ -50,11 +56,18 @@ $(NACLFORTH64): $(OBJ)/naclforth_x86-64.o | $(OUT_APPSTORE_PACKAGE)
 	${CC64} -o $@ $< ${LDFLAGS_X86_64} ${LIBS}
 	${STRIP64} $@
 
+$(NACLFORTHARM): $(OBJ)/naclforth_arm.o | $(OUT_APPSTORE_PACKAGE)
+	${CCARM} -o $@ $< ${LDFLAGS_ARM} ${LIBS}
+	${STRIPARM} $@
+
 $(OBJ)/naclforth_x86-32.o: naclforth.c | $(OBJ)
 	${CC32} -o $@ -c $< ${CFLAGS_X86_32}
 
 $(OBJ)/naclforth_x86-64.o: naclforth.c | $(OBJ)
 	${CC64} -o $@ -c $< ${CFLAGS_X86_64}
+
+$(OBJ)/naclforth_arm.o: naclforth.c | $(OBJ)
+	${CCARM} -o $@ -c $< ${CFLAGS_ARM}
 
 $(OUT_APPENGINE)/%: web/%
 	mkdir -p $(@D)
@@ -83,6 +96,7 @@ naclforth_appstore: $(OUT_APPSTORE)/naclforth.zip
 APPSTORE_PACKAGE_FILES = \
     $(NACLFORTH32) \
     $(NACLFORTH64) \
+    $(NACLFORTHARM) \
     $(OUT_APPSTORE_PACKAGE)/manifest.json \
     $(OUT_APPSTORE_PACKAGE)/naclforth_16.png \
     $(OUT_APPSTORE_PACKAGE)/naclforth_128.png \
