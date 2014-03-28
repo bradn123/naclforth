@@ -36,9 +36,9 @@ OUT_APPSTORE_PACKAGE=$(OUT_APPSTORE)/package
 OUT_HOST=$(OUT)/host
 
 
-NACLFORTH32=$(OUT_APPSTORE_PACKAGE)/x86-32/naclforth_x86-32.nexe
-NACLFORTH64=$(OUT_APPSTORE_PACKAGE)/x86-64/naclforth_x86-64.nexe
-NACLFORTHARM=$(OUT_APPSTORE_PACKAGE)/arm/naclforth_arm.nexe
+NACLFORTH32=$(OUT_APPSTORE_PACKAGE)/_platform_specific/x86-32/naclforth_x86-32.nexe
+NACLFORTH64=$(OUT_APPSTORE_PACKAGE)/_platform_specific/x86-64/naclforth_x86-64.nexe
+NACLFORTHARM=$(OUT_APPSTORE_PACKAGE)/_platform_specific/arm/naclforth_arm.nexe
 
 
 all: naclforth_appengine naclforth_appstore $(OUT_HOST)/naclforth
@@ -87,15 +87,16 @@ naclforth_appengine: \
 
 
 $(OUT_APPENGINE) $(OUT_APPENGINE_STATIC) $(OUT_APPENGINE_TEMPLATES) \
-   $(OUT_APPSTORE) $(OUT_APPSTORE_PACKAGE) \
+   $(OUT_APPSTORE) \
    $(OUT) $(OUT_HOST) $(OBJ):
 	mkdir -p $@
 
 $(OUT_APPSTORE_PACKAGE):
 	mkdir -p $@
-	mkdir -p $@/x86-32
-	mkdir -p $@/x86-64
-	mkdir -p $@/arm
+	mkdir -p $@/_platform_specific
+	mkdir -p $@/_platform_specific/x86-32
+	mkdir -p $@/_platform_specific/x86-64
+	mkdir -p $@/_platform_specific/arm
 
 naclforth_appstore: $(OUT_APPSTORE)/naclforth.zip
 
