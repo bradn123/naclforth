@@ -1,7 +1,7 @@
 {
   "program": {
     "x86-32": {"url": "x86-32/naclforth_x86-32.nexe"},
-    "x86-64": {"url": "x86-64/naclforth_x86-64.nexe"}
+    "x86-64": {"url": "x86-64/naclforth_x86-64.nexe"},
     "arm": {"url": "arm/naclforth_arm.nexe"}
   }
 }
